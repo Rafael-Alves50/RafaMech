@@ -140,8 +140,17 @@ public sealed class UcobP1TwintaniaScenario : IScenario
             var direction = tank.Position - (twin?.Position ?? Vector3.Zero);
             var facing = MathF.Atan2(direction.X, direction.Z);
             if (twin is { } caster)
-                foreach (var member in world.Party.Find.InsideCone(new Placement(caster.Position, facing), MathF.PI / 3f, 12f).ToList())
-                    new DamageSolver(world.Party).ApplyDamage(member, 0.65f, Plummet, "Plummet frontal cleave", lethal: false);
+                foreach (var role in roster)
+                {
+                    var member = Get(role);
+                    if (member == null) continue;
+                    var delta = member.Position - caster.Position;
+                    var distance = MathF.Sqrt(delta.X * delta.X + delta.Z * delta.Z);
+                    var angle = MathF.Atan2(delta.X, delta.Z);
+                    var difference = MathF.Atan2(MathF.Sin(angle - facing), MathF.Cos(angle - facing));
+                    if (distance <= 12f && MathF.Abs(difference) <= MathF.PI / 6f)
+                        new DamageSolver(world.Party).ApplyDamage(member, 0.65f, Plummet, "Plummet frontal cleave", lethal: false);
+                }
         }
         else
         {
