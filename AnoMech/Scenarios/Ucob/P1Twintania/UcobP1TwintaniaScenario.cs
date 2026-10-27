@@ -28,6 +28,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
     }
 
     private SimWorld world = null!;
+    private float mechanicAt;
     private SimEnemy? twin;
     private PartyRole activeTank = PartyRole.MainTank;
     private readonly List<Vector3> twisterSpots = [];
@@ -84,7 +85,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         {
             var stage = order[section][i];
             var at = 5f + i * 10f;
-            world.Events.Add(at, () => Execute(stage, section));
+            world.Events.Add(at, () => Execute(stage, section, at));
         }
         world.Events.Add(5f + order[section].Length * 10f, () => twin?.Despawn());
     }
@@ -106,8 +107,9 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         twin?.SetTarget(Get(activeTank));
     }
 
-    private void Execute(string mechanic, int section)
+    private void Execute(string mechanic, int section, float at)
     {
+        mechanicAt = at;
         if (mechanic.Contains("Liquid Hell"))
             ScheduleLiquidHells(section == 2 && mechanic.Contains("+"));
         if (mechanic.Contains("Fireball"))
@@ -141,19 +143,19 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         // Snapshot at the end of the provisional 3s cast, not at its beginning.
         var initial = selection.Select(Get).Where(p => p != null).ToList();
         var snapshots = new List<Vector3>();
-        world.Events.Add(2.7f, () =>
+        world.Events.Add(mechanicAt + 2.7f, () =>
         {
             snapshots.Clear();
             snapshots.AddRange(initial.Select(p => p!.Position));
             twisterSpots.AddRange(snapshots);
         });
-        world.Events.Add(3.0f, () =>
+        world.Events.Add(mechanicAt + 3.0f, () =>
         {
             foreach (var point in snapshots)
                 foreach (var victim in world.Party.Find.InsideCircle(point, TwisterRadius).ToList())
                     new DamageSolver(world.Party).ApplyDamage(victim, 1f, 0, "Twister: move during cast", lethal: true);
         });
-        world.Events.Add(6.5f, () => twisterSpots.Clear());
+        world.Events.Add(mechanicAt + 6.5f, () => twisterSpots.Clear());
     }
 
     private void ScheduleFireball()
@@ -162,7 +164,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         if (target == null) return;
         twin?.NativeCast(Fireball, FFXIVClientStructs.FFXIV.Client.Game.ActionType.Action,
             0f, 2f, false, targetId: target.GameObjectId);
-        world.Events.Add(2.3f, () =>
+        world.Events.Add(mechanicAt + 2.3f, () =>
         {
             var members = world.Party.Find.InsideCircle(target.Position, 5f).ToList();
             foreach (var member in members)
@@ -181,7 +183,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         hellSpots.Clear();
         for (var n = 0; n < 5; n++)
         {
-            world.Events.Add(n * 1.15f, () =>
+            world.Events.Add(mechanicAt + n * 1.15f, () =>
             {
                 var point = target.Position;
                 hellSpots.Add(point);
@@ -189,7 +191,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
                     0f, 1f, false, position: point);
             });
         }
-        world.Events.Add(5.8f, () =>
+        world.Events.Add(mechanicAt + 5.8f, () =>
         {
             foreach (var point in hellSpots)
                 foreach (var victim in world.Party.Find.InsideCircle(point, LiquidHellRadius).ToList())
@@ -211,7 +213,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
             var link = i == 0 ? new Vector3(0f, 0f, -8f) : new Vector3(-8f, 0f, 5f);
             twin?.NativeCast(Generate, FFXIVClientStructs.FFXIV.Client.Game.ActionType.Action,
                 0f, 2f, false, targetId: character.GameObjectId);
-            world.Events.Add(6f, () =>
+            world.Events.Add(mechanicAt + 6f, () =>
             {
                 if (Vector3.Distance(character.Position, link) > 2.5f)
                     new DamageSolver(world.Party).ApplyDamage(character, 1f, Generate,
