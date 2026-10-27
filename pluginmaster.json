@@ -1,12 +1,12 @@
 [
     {
-        "Author": "Asunnya (fork of Anomek's AnoMech)",
-        "Name": "AsuMech",
-        "Punchline": "Another FFXIV mechanics simulator: a fork of AnoMech with Savage and more fights.",
-        "Description": "Asunnya's fork of AnoMech: spawns fake party members and bosses client-side so you can practice raid mechanics without a full party. Everything from AnoMech, plus Savage raids (M9S) and other fights.",
+        "Author": "Rafael-Alves50 (based on AsuMech / AnoMech)",
+        "Name": "RafaMech",
+        "Punchline": "FFXIV mechanics simulator with UCOB Twintania training",
+        "Description": "RafaMech fork of AsuMech / AnoMech, introducing UCOB Twintania practice.",
         "InternalName": "AnoMech",
         "AssemblyVersion": "0.5.1.6",
-        "RepoUrl": "https://github.com/Asunnya/AsuMech",
+        "RepoUrl": "https://github.com/Rafael-Alves50/RafaMech",
         "ApplicableVersion": "any",
         "Tags": [
             "ultimate",
@@ -16,10 +16,10 @@
             "simulator"
         ],
         "DalamudApiLevel": 15,
-        "IconUrl": "https://raw.githubusercontent.com/Asunnya/AsuMech/asunnya-release/images/icon6464.png",
-        "DownloadLinkInstall": "https://github.com/Asunnya/AsuMech/releases/latest/download/latest.zip",
-        "DownloadLinkTesting": "https://github.com/Asunnya/AsuMech/releases/latest/download/latest.zip",
-        "DownloadLinkUpdate": "https://github.com/Asunnya/AsuMech/releases/latest/download/latest.zip",
+        "IconUrl": "https://raw.githubusercontent.com/Rafael-Alves50/RafaMech/asunnya-release/images/icon6464.png",
+        "DownloadLinkInstall": "https://github.com/Rafael-Alves50/RafaMech/releases/latest/download/latest.zip",
+        "DownloadLinkTesting": "https://github.com/Rafael-Alves50/RafaMech/releases/latest/download/latest.zip",
+        "DownloadLinkUpdate": "https://github.com/Rafael-Alves50/RafaMech/releases/latest/download/latest.zip",
         "IsHide": false,
         "IsTestingExclusive": false,
         "LastUpdate": "1793040475"
