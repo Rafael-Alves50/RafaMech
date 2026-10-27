@@ -94,9 +94,9 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         world.Events.Add(0.15f, SpawnTwintania);
         // Each interval is a teaching timeline, not a claimed FFXIV retail timestamp.
         string[][] order = [
-            ["Plummet", "Twister", "Fireball", "Death Sentence", "Plummet", "Twister", "Fireball"],
-            ["Liquid Hell", "Generate", "Liquid Hell", "Death Sentence", "Generate", "Twister", "Plummet"],
-            ["Liquid Hell", "Generate", "Liquid Hell + Fireball", "Death Sentence", "Plummet", "Generate", "Twister", "Plummet"]
+            ["Plummet", "Twister", "Fireball", "Death Sentence", "Plummet", "Twister", "Fireball", "Death Sentence"],
+            ["Liquid Hell", "Generate", "Liquid Hell", "Death Sentence", "Generate", "Twister", "Plummet", "Death Sentence"],
+            ["Liquid Hell", "Generate", "Liquid Hell + Fireball", "Death Sentence", "Plummet", "Generate", "Twister", "Plummet", "Death Sentence"]
         ];
         var section = Math.Clamp(settings.Section, 0, 2);
         for (var i = 0; i < order[section].Length; i++)
@@ -150,11 +150,17 @@ public sealed class UcobP1TwintaniaScenario : IScenario
             Visibility: SpawnVisibility.Visible,
             Placement: new Placement(new Vector3(0f, 0f, -8f), MathF.PI)));
         twin?.SetTarget(Get(activeTank));
+        if (settings.Section == 1)
+            twin?.SetPosition(new Placement(new Vector3(-12f, 0f, 5f), -MathF.PI / 2f));
+        else if (settings.Section == 2)
+            twin?.SetPosition(new Placement(new Vector3(0f, 0f, 0f), MathF.PI));
     }
 
     private void Execute(string mechanic, int section, float at)
     {
         mechanicAt = at;
+        if (section == 2 && mechanic == "Plummet" && activeTank == PartyRole.MainTank)
+            twin?.MoveTo(new Vector3(12f, 0f, 5f), 4f, MathF.PI / 2f);
         if (mechanic.Contains("Liquid Hell"))
             ScheduleLiquidHells(section == 2 && mechanic.Contains("+"));
         if (mechanic.Contains("Fireball"))
