@@ -18,7 +18,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
     public string Name => "Twintania (NAUR training)";
     public IPhase Phase => UcobZone.P1;
     public bool SupportsSolo => true;
-    public IReadOnlyList<IScenarioAi> AiStrats => [];
+    public IReadOnlyList<IScenarioAi> AiStrats => [new UcobP1TwintaniaAi()];
     public object SettingsOverrides => settings;
     private readonly Settings settings = new();
     private sealed class Settings
@@ -39,13 +39,13 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         PartyRole.ShieldHealer, PartyRole.MeleeDpsA, PartyRole.MeleeDpsB,
         PartyRole.PhysRangedDps, PartyRole.CasterDps
     ];
-    private const uint TwintaniaBaseId = 0x7D6; // Provisional model; verify against duty log
-    private const uint TwintaniaNameId = 0; // Provisional; awaiting a validated replay
-    private const uint Plummet = 0x26A8;
-    private const uint DeathSentence = 0x26A9;
-    private const uint Fireball = 0x26AC;
-    private const uint LiquidHell = 0x26AD;
-    private const uint Generate = 0x26AE;
+    private const uint TwintaniaBaseId = 0x1FDF; // UCOB Twintania OID
+    private const uint TwintaniaNameId = 3210; // TEMP: adjust to correct UCOB Twintania NameId from replay
+    private const uint Plummet = 9896;
+    private const uint DeathSentence = 9897;
+    private const uint Fireball = 9900;
+    private const uint LiquidHell = 9901;
+    private const uint Generate = 9902;
     private const float TwisterRadius = 2.2f;
     private const float LiquidHellRadius = 3.0f;
 
@@ -74,6 +74,8 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         twisterSpots.Clear();
         hellSpots.Clear();
         activeTank = PartyRole.MainTank;
+        if (selectedAi is { } ai && ai == 0)
+            new UcobP1TwintaniaAi().Run(this, world);
         world.Events.Add(0.15f, SpawnTwintania);
         // Each interval is a teaching timeline, not a claimed FFXIV retail timestamp.
         string[][] order = [
@@ -132,8 +134,22 @@ public sealed class UcobP1TwintaniaScenario : IScenario
     private void StrikeTank(uint actionId)
     {
         if (Get(activeTank) is not { } tank) return;
-        twin?.NativeCast(actionId, FFXIVClientStructs.FFXIV.Client.Game.ActionType.Action, 0f, 1.2f,
-            false, targetId: tank.GameObjectId);
+        if (actionId == Plummet)
+        {
+            // Plummet is an instant frontal cleave, not a cast-bar tankbuster.
+            var direction = tank.Position - (twin?.Position ?? Vector3.Zero);
+            var facing = MathF.Atan2(direction.X, direction.Z);
+            if (twin is { } caster)
+                foreach (var member in world.Party.Find.InsideCone(new Placement(caster.Position, facing), MathF.PI / 3f, 12f).ToList())
+                    new DamageSolver(world.Party).ApplyDamage(member, 0.65f, Plummet, "Plummet frontal cleave", lethal: false);
+        }
+        else
+        {
+            twin?.NativeCast(actionId, FFXIVClientStructs.FFXIV.Client.Game.ActionType.Action, 0f, 4f,
+                false, targetId: tank.GameObjectId);
+            world.Events.Add(mechanicAt + 4.1f, () =>
+                new DamageSolver(world.Party).ApplyDamage(tank, 0.95f, DeathSentence, "Death Sentence: tank swap", lethal: false));
+        }
     }
 
     private void ScheduleTwisters()
