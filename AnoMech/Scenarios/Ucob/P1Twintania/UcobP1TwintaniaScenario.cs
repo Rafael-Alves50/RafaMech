@@ -65,6 +65,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
     private const uint DeathSentence = 9897;
     private const uint Twister = 9898;
     private const uint TwisterAOE = 9899;
+    private const uint TwisterVoidzoneEObj = 0x1E8910;
     private const uint Fireball = 9900;
     private const uint LiquidHell = 9901;
     private const uint Generate = 9902;
@@ -267,7 +268,8 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         var selection = roster.OrderBy(_ => Guid.NewGuid()).Take(4).ToList();
         if (settings.TwisterAlwaysOnMe && !selection.Contains(settings.Role))
             selection[0] = settings.Role;
-        // Snapshot at the end of the provisional 3s cast, not at its beginning.
+        // The actual Twister hazard is an EObj voidzone, not an action omen.
+        // The 9899 action has no client omen file: SpawnActionOmen silently draws nothing.
         var initial = selection.Select(Get).Where(p => p != null).ToList();
         var snapshots = new List<Vector3>();
         world.Events.Add(mechanicAt + 2.0f, () =>
@@ -276,9 +278,16 @@ public sealed class UcobP1TwintaniaScenario : IScenario
             snapshots.AddRange(initial.Select(p => p!.Position));
             twisterSpots.AddRange(snapshots);
             foreach (var spot in snapshots)
-                world.SpawnActionOmen(TwisterAOE, spot, 0f, 4f);
+                world.SpawnEventObject(new EventObjectSpawnConfig
+                {
+                    EObjId = TwisterVoidzoneEObj,
+                    Placement = new Placement(spot, 0f),
+                    Radius = TwisterRadius,
+                    Lifetime = 4f,
+                    TargetableStatus = 1,
+                });
         });
-        world.Events.Add(mechanicAt + 2.1f, () =>
+        world.Events.Add(mechanicAt + 2.45f, () =>
         {
             foreach (var point in snapshots)
                 foreach (var victim in world.Party.Find.InsideCircle(point, TwisterRadius).ToList())
