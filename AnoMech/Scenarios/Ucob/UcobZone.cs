@@ -9,6 +9,10 @@ namespace AnoMech.Scenarios.Ucob;
 public sealed class UcobZone : IZone
 {
     public static readonly UcobZone Instance = new();
+    public static readonly Phase P1 = new(Instance, "P1", null, 0, init: world =>
+    {
+        world.EnforceArenaBoundary(24.5f);
+    });
     public static readonly Phase P5 = new(Instance, "P5", 32, 499,
         init: world =>
         {
