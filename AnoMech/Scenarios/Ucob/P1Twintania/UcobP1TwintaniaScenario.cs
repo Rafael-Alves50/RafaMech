@@ -230,10 +230,10 @@ public sealed class UcobP1TwintaniaScenario : IScenario
     private void ScheduleHatch(int section)
     {
         var targets = roster.Skip(4).OrderBy(_ => Guid.NewGuid()).Take(section == 2 ? 2 : 1).ToArray();
-        // Caster intercepts first Hatch assigned to physical ranged during liquid bait.
+        // NAUR customization: M1 always intercepts a Hatch assigned to the physical ranged baiter.
         for (var i = 0; i < targets.Length; i++)
         {
-            var role = targets[i] == PartyRole.PhysRangedDps ? PartyRole.CasterDps : targets[i];
+            var role = targets[i] == PartyRole.PhysRangedDps ? PartyRole.MeleeDpsA : targets[i];
             var character = Get(role);
             if (character == null) continue;
             var link = i == 0 ? new Vector3(0f, 0f, -8f) : new Vector3(-8f, 0f, 5f);
