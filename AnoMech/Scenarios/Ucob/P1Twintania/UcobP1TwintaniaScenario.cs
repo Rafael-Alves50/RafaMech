@@ -63,6 +63,8 @@ public sealed class UcobP1TwintaniaScenario : IScenario
     }
     private const uint Plummet = 9896;
     private const uint DeathSentence = 9897;
+    private const uint Twister = 9898;
+    private const uint TwisterAOE = 9899;
     private const uint Fireball = 9900;
     private const uint LiquidHell = 9901;
     private const uint Generate = 9902;
@@ -250,23 +252,25 @@ public sealed class UcobP1TwintaniaScenario : IScenario
 
     private void ScheduleTwisters()
     {
+        // The real Twister is a 2s Twintania cast; resolve at the end of the castbar.
+        twin?.NativeCast(Twister, ActionType.Action, 0f, 2.0f, false);
         var selection = roster.OrderBy(_ => Guid.NewGuid()).Take(4).ToList();
         if (settings.TwisterAlwaysOnMe && !selection.Contains(settings.Role))
             selection[0] = settings.Role;
         // Snapshot at the end of the provisional 3s cast, not at its beginning.
         var initial = selection.Select(Get).Where(p => p != null).ToList();
         var snapshots = new List<Vector3>();
-        world.Events.Add(mechanicAt + 2.7f, () =>
+        world.Events.Add(mechanicAt + 2.0f, () =>
         {
             snapshots.Clear();
             snapshots.AddRange(initial.Select(p => p!.Position));
             twisterSpots.AddRange(snapshots);
         });
-        world.Events.Add(mechanicAt + 3.0f, () =>
+        world.Events.Add(mechanicAt + 2.1f, () =>
         {
             foreach (var point in snapshots)
                 foreach (var victim in world.Party.Find.InsideCircle(point, TwisterRadius).ToList())
-                    new DamageSolver(world.Party).ApplyDamage(victim, 1f, 0, "Twister: move during cast", lethal: true);
+                    new DamageSolver(world.Party).ApplyDamage(victim, 1f, TwisterAOE, "Twister: move during cast", lethal: true);
         });
         world.Events.Add(mechanicAt + 6.5f, () => twisterSpots.Clear());
     }
