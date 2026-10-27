@@ -49,7 +49,18 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         PartyRole.PhysRangedDps, PartyRole.CasterDps
     ];
     private const uint TwintaniaBaseId = 0x1FDF; // UCOB Twintania OID
-    private const uint TwintaniaNameId = 3210; // TEMP: adjust to correct UCOB Twintania NameId from replay
+    private static uint? cachedTwintaniaNameId;
+    private static uint TwintaniaNameId
+    {
+        get
+        {
+            if (cachedTwintaniaNameId.HasValue) return cachedTwintaniaNameId.Value;
+            for (uint id = 1; id < 15000; id++)
+                if (string.Equals(Natives.Data.BNpcName(id), "Twintania", StringComparison.OrdinalIgnoreCase))
+                    return (cachedTwintaniaNameId = id).Value;
+            return (cachedTwintaniaNameId = 0).Value;
+        }
+    }
     private const uint Plummet = 9896;
     private const uint DeathSentence = 9897;
     private const uint Fireball = 9900;
@@ -94,7 +105,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         world.Events.Add(0.15f, SpawnTwintania);
         // Each interval is a teaching timeline, not a claimed FFXIV retail timestamp.
         string[][] order = [
-            ["Plummet", "Twister", "Fireball", "Death Sentence", "Plummet", "Twister", "Fireball", "Death Sentence"],
+            ["Plummet", "Twister", "Death Sentence", "Fireball", "Plummet", "Twister", "Death Sentence", "Fireball"],
             ["Liquid Hell", "Generate", "Liquid Hell", "Death Sentence", "Generate", "Twister", "Plummet", "Death Sentence"],
             ["Liquid Hell", "Generate", "Liquid Hell + Fireball", "Death Sentence", "Plummet", "Generate", "Twister", "Plummet", "Death Sentence"]
         ];
@@ -266,13 +277,16 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         if (target == null) return;
         twin?.NativeCast(Fireball, FFXIVClientStructs.FFXIV.Client.Game.ActionType.Action,
             0f, 2f, false, targetId: target.GameObjectId);
-        world.Events.Add(mechanicAt + 2.3f, () =>
+        world.Events.Add(mechanicAt + 3.8f, () =>
         {
             var members = world.Party.Find.InsideCircle(target.Position, 5f).ToList();
+            if (members.Count == 0) return;
+            var sharedDamage = 0.9f / members.Count;
+            if (members.Count < 5)
+                world.Fail($"Fireball: only {members.Count} in stack (need five).");
             foreach (var member in members)
                 new DamageSolver(world.Party).ApplyDamage(member,
-                    members.Count >= 5 ? 0.2f : 0.85f, Fireball,
-                    "Fireball: insufficient stack", lethal: false);
+                    sharedDamage, Fireball, "Fireball: shared damage", lethal: false);
         });
     }
 
