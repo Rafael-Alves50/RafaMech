@@ -5,7 +5,7 @@
         "Punchline": "FFXIV mechanics simulator with UCOB Twintania training",
         "Description": "RafaMech fork of AsuMech / AnoMech, introducing UCOB Twintania practice.",
         "InternalName": "AnoMech",
-        "AssemblyVersion": "0.5.1.6",
+        "AssemblyVersion": "0.5.1.8",
         "RepoUrl": "https://github.com/Rafael-Alves50/RafaMech",
         "ApplicableVersion": "any",
         "Tags": [
@@ -22,6 +22,6 @@
         "DownloadLinkUpdate": "https://github.com/Rafael-Alves50/RafaMech/releases/latest/download/latest.zip",
         "IsHide": false,
         "IsTestingExclusive": false,
-        "LastUpdate": "1793113638"
+        "LastUpdate": "1793115022"
     }
 ]
