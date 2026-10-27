@@ -105,22 +105,32 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         if (selectedAi is { } ai && ai == 0)
             new UcobP1TwintaniaAi().Run(this, world);
         world.Events.Add(0.15f, SpawnTwintania);
-        // Each interval is a teaching timeline, not a claimed FFXIV retail timestamp.
-        string[][] order = [
-            ["Plummet", "Twister", "Death Sentence", "Fireball", "Plummet", "Twister", "Death Sentence", "Fireball"],
-            ["Liquid Hell", "Generate", "Liquid Hell", "Death Sentence", "Generate", "Twister", "Plummet", "Death Sentence"],
-            ["Liquid Hell", "Generate", "Liquid Hell + Fireball", "Death Sentence", "Plummet", "Generate", "Twister", "Plummet", "Death Sentence"]
+        // P1 timing reference: UCOB retail timeline (seconds from pull) published
+        // on the Lodestone. HP-dependent section timing remains approximate.
+        // Training-only ordering places Death Sentence before Fireball per user request.
+        (float At, string Mechanic)[][] tracks =
+        [
+            [(8f, "Plummet"), (11f, "Twister"), (19f, "Death Sentence"),
+             (16f, "Fireball"), (28f, "Plummet"), (30f, "Twister"),
+             (35f, "Fireball")],
+            [(8f, "Liquid Hell"), (13f, "Generate"), (20f, "Liquid Hell"),
+             (25f, "Death Sentence"), (33f, "Generate"), (37f, "Twister"),
+             (46f, "Plummet")],
+            [(8f, "Liquid Hell"), (13f, "Generate"), (20f, "Liquid Hell + Fireball"),
+             (26f, "Death Sentence"), (34f, "Plummet"), (37f, "Generate"),
+             (41f, "Twister"), (50f, "Plummet")]
         ];
         var section = Math.Clamp(settings.Section, 0, 2);
-        for (var i = 0; i < order[section].Length; i++)
+        foreach (var item in tracks[section])
         {
-            var stage = order[section][i];
-            var at = 5f + i * 10f;
-            world.Events.Add(at, () => Execute(stage, section, at));
+            var at = item.At;
+            var mechanic = item.Mechanic;
+            world.Events.Add(at, () => Execute(mechanic, section, at));
         }
-        world.Events.Add(5f + order[section].Length * 10f, () =>
+        var endAt = tracks[section].Max(x => x.At) + 12f;
+        world.Events.Add(endAt, () =>
         {
-            AnoMech.Core.Native.Interfaces.Natives.UserActions.Acted -= OnPlayerAction;
+            Natives.UserActions.Acted -= OnPlayerAction;
             twin?.Despawn();
         });
     }
@@ -265,6 +275,8 @@ public sealed class UcobP1TwintaniaScenario : IScenario
             snapshots.Clear();
             snapshots.AddRange(initial.Select(p => p!.Position));
             twisterSpots.AddRange(snapshots);
+            foreach (var spot in snapshots)
+                world.SpawnActionOmen(TwisterAOE, spot, 0f, 4f);
         });
         world.Events.Add(mechanicAt + 2.1f, () =>
         {
