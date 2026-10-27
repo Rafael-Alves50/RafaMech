@@ -41,7 +41,7 @@ public sealed class UcobP1TwintaniaAi : IScenarioAi<UcobP1TwintaniaScenario>
             new Vector2(0f, 2.0f),
             new Vector2(0f, 0.0f)
         ).NaturalOrder());
-        // Second Twister at 30s–32s: step out after the bait snapshot, before resolution.
+        // Spread from the Fireball stack before the next Twister. Without this,\n        // multiple bait circles pile up on the same spot and clip the entire party.\n        ai.Move(28.0f, () => AiMove.Create(\n            new Vector2(-1.5f, -13f), new Vector2(-4f, -11f),\n            new Vector2(-7f, -2.5f), new Vector2(7f, -2.5f),\n            new Vector2(-4f, 0f), new Vector2(4f, 0f),\n            new Vector2(-13f, 11f), new Vector2(11f, 5f)\n        ).NaturalOrder());\n        // Second Twister at 30s–32s: step out after the bait snapshot, before resolution.
         ai.Move(31.5f, () => AiMove.Create(
             new Vector2(-4.5f, -13f),
             new Vector2(-7f, -11f),
