@@ -28,9 +28,9 @@ internal sealed unsafe class LevelSync
         statsSynced = false;
     }
 
-    public void Apply(ContentFinderCondition cfc, Character* player, byte classJobId)
+    public void Apply(ContentFinderCondition cfc, Character* player, byte classJobId, byte forcedLevel = 0)
     {
-        var cfcLevelSync = cfc.ClassJobLevelSync;
+        var cfcLevelSync = forcedLevel != 0 ? forcedLevel : cfc.ClassJobLevelSync;
         var currentLevel = (byte)Plugin.PlayerState.Level;
         levelSynced = cfcLevelSync != 0 && currentLevel > cfcLevelSync;
 
