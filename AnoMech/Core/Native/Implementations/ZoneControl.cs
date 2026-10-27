@@ -662,7 +662,7 @@ public sealed unsafe partial class ZoneControl : IZoneControl
             loadedInstanceContent = contentId;
             InstanceContentDirectorHelper.SetDutyData(cfc);
 
-            levelSync.Apply(cfc, player, classJobId);
+            levelSync.Apply(cfc, player, classJobId, territory == 733 ? (byte)70 : (byte)0);
         }
         else
         {
