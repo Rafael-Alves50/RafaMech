@@ -69,7 +69,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
     private const uint Fireball = 9900;
     private const uint LiquidHell = 9901;
     private const uint Generate = 9902;
-    private const float TwisterRadius = 2.2f;
+    private const float TwisterRadius = 0.8f; // contact core; larger knockback occurs only on contact
     private const float LiquidHellRadius = 3.0f;
 
     public void DrawSettings()
@@ -287,7 +287,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
                     TargetableStatus = 1,
                 });
         });
-        world.Events.Add(mechanicAt + 2.45f, () =>
+        world.Events.Add(mechanicAt + 2.55f, () =>
         {
             foreach (var point in snapshots)
                 foreach (var victim in world.Party.Find.InsideCircle(point, TwisterRadius).ToList())
