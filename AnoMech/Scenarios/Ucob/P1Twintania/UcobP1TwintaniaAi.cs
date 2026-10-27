@@ -23,8 +23,8 @@ public sealed class UcobP1TwintaniaAi : IScenarioAi<UcobP1TwintaniaScenario>
             new Vector2(-13f, 11f),
             new Vector2(11f, 5f)
         ).NaturalOrder());
-        // Move when Twister cast is ~60% complete (begins at 11s, resolves at 13s).
-        ai.Move(12.2f, () => AiMove.Create(
+        // Move at ~75% of cast (11s–13s); movement must start BEFORE the ground Twisters spawn.
+        ai.Move(12.5f, () => AiMove.Create(
             new Vector2(-3.5f, -13f), new Vector2(-6f, -11f),
             new Vector2(-9f, -2.5f), new Vector2(9f, -2.5f),
             new Vector2(-6f, 0f), new Vector2(6f, 0f),
@@ -41,8 +41,8 @@ public sealed class UcobP1TwintaniaAi : IScenarioAi<UcobP1TwintaniaScenario>
             new Vector2(0f, 2.0f),
             new Vector2(0f, 0.0f)
         ).NaturalOrder());
-        // Second Twister starts at 30s: start stepping out before its snapshot.
-        ai.Move(30.7f, () => AiMove.Create(
+        // Second Twister at 30s–32s: step out after the bait snapshot, before resolution.
+        ai.Move(31.5f, () => AiMove.Create(
             new Vector2(-4.5f, -13f),
             new Vector2(-7f, -11f),
             new Vector2(-10f, -2.5f),
