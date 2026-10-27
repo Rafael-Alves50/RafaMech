@@ -287,11 +287,13 @@ public sealed class UcobP1TwintaniaScenario : IScenario
                     TargetableStatus = 1,
                 });
         });
-        world.Events.Add(mechanicAt + 2.55f, () =>
+        // Collision checks occur at creation: the hazard is active immediately as the cast ends.
+        // No delayed unconditional AOE blast (which previously made it seem tied to the tankbuster).
+        world.Events.Add(mechanicAt + 2.0f, () =>
         {
             foreach (var point in snapshots)
                 foreach (var victim in world.Party.Find.InsideCircle(point, TwisterRadius).ToList())
-                    new DamageSolver(world.Party).ApplyDamage(victim, 1f, TwisterAOE, "Twister: move during cast", lethal: true);
+                    new DamageSolver(world.Party).ApplyDamage(victim, 1f, TwisterAOE, "Twister contact at spawn", lethal: true);
         });
         world.Events.Add(mechanicAt + 6.5f, () => twisterSpots.Clear());
     }
@@ -300,8 +302,11 @@ public sealed class UcobP1TwintaniaScenario : IScenario
     {
         var target = Pick(roster.Skip(2).ToArray());
         if (target == null) return;
-        twin?.NativeCast(Fireball, FFXIVClientStructs.FFXIV.Client.Game.ActionType.Action,
-            0f, 2f, false, targetId: target.GameObjectId);
+        // Fireball is instant/no castbar in retail. Play its action effect on impact.
+        var fireballAt = mechanicAt;
+        world.Events.Add(fireballAt, () =>
+            twin?.NativeActionEffect(Fireball, 0.6f, 0, 0, ActionType.Action, 0,
+                animationTargetId: target.GameObjectId, actionTargetId: target.GameObjectId));
         world.Events.Add(mechanicAt + 3.8f, () =>
         {
             var members = world.Party.Find.InsideCircle(target.Position, 5f).ToList();
