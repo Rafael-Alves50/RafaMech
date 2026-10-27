@@ -107,11 +107,11 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         world.Events.Add(0.15f, SpawnTwintania);
         // P1 timing reference: UCOB retail timeline (seconds from pull) published
         // on the Lodestone. HP-dependent section timing remains approximate.
-        // Training-only ordering places Death Sentence before Fireball per user request.
+        // The opener follows the documented retail order: Twister, Fireball, Death Sentence.
         (float At, string Mechanic)[][] tracks =
         [
-            [(8f, "Plummet"), (11f, "Twister"), (15f, "Death Sentence"),
-             (19f, "Fireball"), (28f, "Plummet"), (30f, "Twister"),
+            [(8f, "Plummet"), (11f, "Twister"), (16f, "Fireball"),
+             (19f, "Death Sentence"), (28f, "Plummet"), (30f, "Twister"),
              (35f, "Fireball")],
             [(8f, "Liquid Hell"), (13f, "Generate"), (20f, "Liquid Hell"),
              (25f, "Death Sentence"), (33f, "Generate"), (37f, "Twister"),
