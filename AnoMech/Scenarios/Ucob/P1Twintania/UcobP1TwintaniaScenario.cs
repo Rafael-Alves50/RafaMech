@@ -304,10 +304,10 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         if (target == null) return;
         // Fireball is instant/no castbar in retail. Play its action effect on impact.
         var fireballAt = mechanicAt;
-        world.Events.Add(fireballAt, () =>
+        world.Events.Add(fireballAt + 0.5f, () =>
             twin?.NativeActionEffect(Fireball, 0.6f, 0, 0, ActionType.Action, 0,
                 animationTargetId: target.GameObjectId, actionTargetId: target.GameObjectId));
-        world.Events.Add(mechanicAt + 3.8f, () =>
+        world.Events.Add(mechanicAt + 0.5f, () =>
         {
             var members = world.Party.Find.InsideCircle(target.Position, 5f).ToList();
             if (members.Count == 0) return;
