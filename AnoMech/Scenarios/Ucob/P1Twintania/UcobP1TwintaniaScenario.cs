@@ -110,8 +110,8 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         // Training-only ordering places Death Sentence before Fireball per user request.
         (float At, string Mechanic)[][] tracks =
         [
-            [(8f, "Plummet"), (11f, "Twister"), (19f, "Death Sentence"),
-             (16f, "Fireball"), (28f, "Plummet"), (30f, "Twister"),
+            [(8f, "Plummet"), (11f, "Twister"), (15f, "Death Sentence"),
+             (19f, "Fireball"), (28f, "Plummet"), (30f, "Twister"),
              (35f, "Fireball")],
             [(8f, "Liquid Hell"), (13f, "Generate"), (20f, "Liquid Hell"),
              (25f, "Death Sentence"), (33f, "Generate"), (37f, "Twister"),
