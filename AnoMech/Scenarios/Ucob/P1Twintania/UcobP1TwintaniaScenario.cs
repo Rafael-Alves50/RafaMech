@@ -263,7 +263,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
 
     private void ScheduleTwisters()
     {
-        // The cast bar finishes at t+2.0. Record each bait location before the finish,
+        // The cast bar finishes at t+2.0. Snapshot bait locations shortly before the finish,
         // then materialize the ground hazard at the finish. Checking a position sampled
         // at the same timestamp as the hit falsely kills every targeted moving player.
         twin?.NativeCast(Twister, ActionType.Action, 0f, 2.0f, false);
@@ -273,7 +273,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         var selected = targets.Select(Get).Where(p => p != null).ToList();
         var baitPositions = new List<Vector3>();
         var startAt = mechanicAt;
-        world.Events.Add(startAt + 1.2f, () =>
+        world.Events.Add(startAt + 1.45f, () =>
         {
             baitPositions.Clear();
             baitPositions.AddRange(selected.Select(p => p!.Position));
