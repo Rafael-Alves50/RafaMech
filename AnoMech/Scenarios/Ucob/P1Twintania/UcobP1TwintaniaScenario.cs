@@ -263,39 +263,43 @@ public sealed class UcobP1TwintaniaScenario : IScenario
 
     private void ScheduleTwisters()
     {
-        // The real Twister is a 2s Twintania cast; resolve at the end of the castbar.
+        // The cast bar finishes at t+2.0. Record each bait location before the finish,
+        // then materialize the ground hazard at the finish. Checking a position sampled
+        // at the same timestamp as the hit falsely kills every targeted moving player.
         twin?.NativeCast(Twister, ActionType.Action, 0f, 2.0f, false);
-        var selection = roster.OrderBy(_ => Guid.NewGuid()).Take(4).ToList();
-        if (settings.TwisterAlwaysOnMe && !selection.Contains(settings.Role))
-            selection[0] = settings.Role;
-        // The actual Twister hazard is an EObj voidzone, not an action omen.
-        // The 9899 action has no client omen file: SpawnActionOmen silently draws nothing.
-        var initial = selection.Select(Get).Where(p => p != null).ToList();
-        var snapshots = new List<Vector3>();
-        world.Events.Add(mechanicAt + 2.0f, () =>
+        var targets = roster.OrderBy(_ => Guid.NewGuid()).Take(4).ToList();
+        if (settings.TwisterAlwaysOnMe && !targets.Contains(settings.Role))
+            targets[0] = settings.Role;
+        var selected = targets.Select(Get).Where(p => p != null).ToList();
+        var baitPositions = new List<Vector3>();
+        var startAt = mechanicAt;
+        world.Events.Add(startAt + 1.2f, () =>
         {
-            snapshots.Clear();
-            snapshots.AddRange(initial.Select(p => p!.Position));
-            twisterSpots.AddRange(snapshots);
-            foreach (var spot in snapshots)
+            baitPositions.Clear();
+            baitPositions.AddRange(selected.Select(p => p!.Position));
+        });
+        world.Events.Add(startAt + 2.0f, () =>
+        {
+            twisterSpots.AddRange(baitPositions);
+            foreach (var point in baitPositions)
+            {
                 world.SpawnEventObject(new EventObjectSpawnConfig
                 {
                     EObjId = TwisterVoidzoneEObj,
-                    Placement = new Placement(spot, 0f),
+                    Placement = new Placement(point, 0f),
                     Radius = TwisterRadius,
                     Lifetime = 4f,
                     TargetableStatus = 1,
                 });
-        });
-        // Collision checks occur at creation: the hazard is active immediately as the cast ends.
-        // No delayed unconditional AOE blast (which previously made it seem tied to the tankbuster).
-        world.Events.Add(mechanicAt + 2.0f, () =>
-        {
-            foreach (var point in snapshots)
+            }
+            // One contact check at creation, against the earlier bait locations.
+            // Moving away must be possible; no delayed invisible explosion.
+            foreach (var point in baitPositions)
                 foreach (var victim in world.Party.Find.InsideCircle(point, TwisterRadius).ToList())
-                    new DamageSolver(world.Party).ApplyDamage(victim, 1f, TwisterAOE, "Twister contact at spawn", lethal: true);
+                    new DamageSolver(world.Party).ApplyDamage(victim, 1f, TwisterAOE,
+                        "Twister: standing at baited location", lethal: true);
         });
-        world.Events.Add(mechanicAt + 6.5f, () => twisterSpots.Clear());
+        world.Events.Add(startAt + 6.5f, () => twisterSpots.Clear());
     }
 
     private void ScheduleFireball()
