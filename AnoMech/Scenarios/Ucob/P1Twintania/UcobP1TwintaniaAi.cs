@@ -41,15 +41,16 @@ public sealed class UcobP1TwintaniaAi : IScenarioAi<UcobP1TwintaniaScenario>
             new Vector2(0f, 2.0f),
             new Vector2(0f, 0.0f)
         ).NaturalOrder());
-        ai.Move(31.2f, () => AiMove.Create(
-            new Vector2(-1.5f, -13f),
-            new Vector2(-4f, -11f),
-            new Vector2(-7f, -2.5f),
-            new Vector2(7f, -2.5f),
-            new Vector2(-4f, 0f),
-            new Vector2(4f, 0f),
-            new Vector2(-13f, 11f),
-            new Vector2(11f, 5f)
+        // Second Twister starts at 30s: start stepping out before its snapshot.
+        ai.Move(30.7f, () => AiMove.Create(
+            new Vector2(-4.5f, -13f),
+            new Vector2(-7f, -11f),
+            new Vector2(-10f, -2.5f),
+            new Vector2(10f, -2.5f),
+            new Vector2(-7f, 0f),
+            new Vector2(7f, 0f),
+            new Vector2(-16f, 11f),
+            new Vector2(14f, 5f)
         ).NaturalOrder());
     }
 }
