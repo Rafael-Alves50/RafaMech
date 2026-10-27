@@ -7,6 +7,8 @@ using AnoMech.Scenarios.Legacy;
 using AnoMech.Core.Game.Ai;
 using AnoMech.Core.Game.Party;
 using AnoMech.Core.SimObjects;
+using AnoMech.Core.Native.Interfaces;
+using FFXIVClientStructs.FFXIV.Client.Game;
 using Dalamud.Bindings.ImGui;
 
 namespace AnoMech.Scenarios.Ucob.P1Twintania;
@@ -30,6 +32,13 @@ public sealed class UcobP1TwintaniaScenario : IScenario
 
     private SimWorld world = null!;
     private float mechanicAt;
+    private const uint ProvokeAction = 7533;
+    private bool awaitingPlayerProvoke;
+    private bool swapComplete;
+    private bool otHasTakenFirstSwap;
+    private PartyRole exposedTank;
+    private float currentElapsed;
+
     private SimEnemy? twin;
     private PartyRole activeTank = PartyRole.MainTank;
     private readonly List<Vector3> twisterSpots = [];
@@ -74,6 +83,12 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         twisterSpots.Clear();
         hellSpots.Clear();
         activeTank = PartyRole.MainTank;
+        awaitingPlayerProvoke = false;
+        swapComplete = false;
+        otHasTakenFirstSwap = false;
+        currentElapsed = 0f;
+        AnoMech.Core.Native.Interfaces.Natives.UserActions.Acted -= OnPlayerAction;
+        AnoMech.Core.Native.Interfaces.Natives.UserActions.Acted += OnPlayerAction;
         if (selectedAi is { } ai && ai == 0)
             new UcobP1TwintaniaAi().Run(this, world);
         world.Events.Add(0.15f, SpawnTwintania);
@@ -90,7 +105,34 @@ public sealed class UcobP1TwintaniaScenario : IScenario
             var at = 5f + i * 10f;
             world.Events.Add(at, () => Execute(stage, section, at));
         }
-        world.Events.Add(5f + order[section].Length * 10f, () => twin?.Despawn());
+        world.Events.Add(5f + order[section].Length * 10f, () =>
+        {
+            AnoMech.Core.Native.Interfaces.Natives.UserActions.Acted -= OnPlayerAction;
+            twin?.Despawn();
+        });
+    }
+
+    public void Tick(float delta, float elapsed) => currentElapsed = elapsed;
+
+    private void OnPlayerAction(PlayerAction action)
+    {
+        if (!awaitingPlayerProvoke || action.Step != PlayerActionStep.Resolved || action.ActionId != ProvokeAction)
+            return;
+        if (settings.Role != PartyRole.MainTank || twin == null || action.TargetId != twin.GameObjectId)
+            return;
+        activeTank = PartyRole.MainTank;
+        swapComplete = true;
+        awaitingPlayerProvoke = false;
+        twin.SetTarget(Get(activeTank));
+    }
+
+    private void BotSwapToOffTank()
+    {
+        activeTank = PartyRole.OffTank;
+        otHasTakenFirstSwap = true;
+        swapComplete = true;
+        awaitingPlayerProvoke = false;
+        twin?.SetTarget(Get(activeTank));
     }
 
     private SimCharacter? Get(PartyRole role) => world.Party.Get(role);
@@ -126,8 +168,36 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         if (mechanic == "Death Sentence")
         {
             StrikeTank(DeathSentence);
-            activeTank = activeTank == PartyRole.MainTank ? PartyRole.OffTank : PartyRole.MainTank;
-            twin?.SetTarget(Get(activeTank));
+            // The outgoing tank retains Slashing Resistance Down; the other tank
+            // must Provoke during the cast, before the following auto-attack.
+            exposedTank = activeTank;
+            swapComplete = false;
+            if (activeTank == PartyRole.MainTank)
+            {
+                if (settings.Role == PartyRole.MainTank)
+                    world.Events.Add(at + 2.8f, BotSwapToOffTank);
+                else
+                    world.Events.Add(at + 2.8f, BotSwapToOffTank);
+            }
+            else if (settings.Role == PartyRole.MainTank)
+            {
+                awaitingPlayerProvoke = true;
+            }
+            else
+            {
+                // Non-MT practice currently assumes scripted bot swap to the MT.
+                world.Events.Add(at + 2.8f, () => { activeTank = PartyRole.MainTank; swapComplete = true; twin?.SetTarget(Get(activeTank)); });
+            }
+            world.Events.Add(at + 4.6f, () =>
+            {
+                if (!swapComplete || activeTank == exposedTank)
+                {
+                    var victim = Get(exposedTank);
+                    if (victim != null)
+                        new DamageSolver(world.Party).ApplyDamage(victim, 1f, DeathSentence, "Death Sentence: failed tank swap", lethal: true);
+                    world.Fail("Tank swap failed: Provoke Twintania during Death Sentence before the next attack.");
+                }
+            });
         }
     }
 
