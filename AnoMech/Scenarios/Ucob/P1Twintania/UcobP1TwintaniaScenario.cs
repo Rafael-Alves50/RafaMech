@@ -205,9 +205,9 @@ public sealed class UcobP1TwintaniaScenario : IScenario
             if (activeTank == PartyRole.MainTank)
             {
                 if (settings.Role == PartyRole.MainTank)
-                    world.Events.Add(at + 2.8f, BotSwapToOffTank);
+                    world.Events.Add(2.8f, BotSwapToOffTank);
                 else
-                    world.Events.Add(at + 2.8f, BotSwapToOffTank);
+                    world.Events.Add(2.8f, BotSwapToOffTank);
             }
             else if (settings.Role == PartyRole.MainTank)
             {
@@ -216,9 +216,9 @@ public sealed class UcobP1TwintaniaScenario : IScenario
             else
             {
                 // Non-MT practice currently assumes scripted bot swap to the MT.
-                world.Events.Add(at + 2.8f, () => { activeTank = PartyRole.MainTank; swapComplete = true; twin?.SetTarget(Get(activeTank)); });
+                world.Events.Add(2.8f, () => { activeTank = PartyRole.MainTank; swapComplete = true; twin?.SetTarget(Get(activeTank)); });
             }
-            world.Events.Add(at + 4.6f, () =>
+            world.Events.Add(4.6f, () =>
             {
                 if (!swapComplete || activeTank == exposedTank)
                 {
@@ -256,7 +256,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         {
             twin?.NativeCast(actionId, FFXIVClientStructs.FFXIV.Client.Game.ActionType.Action, 0f, 4f,
                 false, targetId: tank.GameObjectId);
-            world.Events.Add(mechanicAt + 4.1f, () =>
+            world.Events.Add(4.1f, () =>
                 new DamageSolver(world.Party).ApplyDamage(tank, 0.95f, DeathSentence, "Death Sentence: tank swap", lethal: false));
         }
     }
@@ -272,13 +272,12 @@ public sealed class UcobP1TwintaniaScenario : IScenario
             targets[0] = settings.Role;
         var selected = targets.Select(Get).Where(p => p != null).ToList();
         var baitPositions = new List<Vector3>();
-        var startAt = mechanicAt;
-        world.Events.Add(startAt + 1.45f, () =>
+        world.Events.Add(1.45f, () =>
         {
             baitPositions.Clear();
             baitPositions.AddRange(selected.Select(p => p!.Position));
         });
-        world.Events.Add(startAt + 2.0f, () =>
+        world.Events.Add(2.0f, () =>
         {
             twisterSpots.AddRange(baitPositions);
             foreach (var point in baitPositions)
@@ -299,7 +298,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
                     new DamageSolver(world.Party).ApplyDamage(victim, 1f, TwisterAOE,
                         "Twister: standing at baited location", lethal: true);
         });
-        world.Events.Add(startAt + 6.5f, () => twisterSpots.Clear());
+        world.Events.Add(6.5f, () => twisterSpots.Clear());
     }
 
     private void ScheduleFireball()
@@ -307,11 +306,10 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         var target = Pick(roster.Skip(2).ToArray());
         if (target == null) return;
         // Fireball is instant/no castbar in retail. Play its action effect on impact.
-        var fireballAt = mechanicAt;
-        world.Events.Add(fireballAt + 0.5f, () =>
+        world.Events.Add(0.5f, () =>
             twin?.NativeActionEffect(Fireball, 0.6f, 0, 0, ActionType.Action, 0,
                 animationTargetId: target.GameObjectId, actionTargetId: target.GameObjectId));
-        world.Events.Add(mechanicAt + 0.5f, () =>
+        world.Events.Add(0.5f, () =>
         {
             var members = world.Party.Find.InsideCircle(target.Position, 5f).ToList();
             if (members.Count == 0) return;
@@ -333,7 +331,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         hellSpots.Clear();
         for (var n = 0; n < 5; n++)
         {
-            world.Events.Add(mechanicAt + n * 1.15f, () =>
+            world.Events.Add(n * 1.15f, () =>
             {
                 var point = target.Position;
                 hellSpots.Add(point);
@@ -341,7 +339,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
                     0f, 1f, false, position: point);
             });
         }
-        world.Events.Add(mechanicAt + 5.8f, () =>
+        world.Events.Add(5.8f, () =>
         {
             foreach (var point in hellSpots)
                 foreach (var victim in world.Party.Find.InsideCircle(point, LiquidHellRadius).ToList())
@@ -363,7 +361,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
             var link = i == 0 ? new Vector3(0f, 0f, -8f) : new Vector3(-8f, 0f, 5f);
             twin?.NativeCast(Generate, FFXIVClientStructs.FFXIV.Client.Game.ActionType.Action,
                 0f, 2f, false, targetId: character.GameObjectId);
-            world.Events.Add(mechanicAt + 6f, () =>
+            world.Events.Add(6f, () =>
             {
                 if (Vector3.Distance(character.Position, link) > 2.5f)
                     new DamageSolver(world.Party).ApplyDamage(character, 1f, Generate,
