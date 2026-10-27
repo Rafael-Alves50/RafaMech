@@ -165,3 +165,6 @@ AnoMech's zone changes are built on **Hyperborea**, which served as the baseline
 
 **FFXIV-RaidsRewritten** and **bossmod** were the initial inspiration for the project, though neither is part of the                                                                                                                                                                              
 codebase anymore.
+
+
+<!-- RafaMech build validation: GitHub Actions enabled; trigger CI for UCOB P1. -->
