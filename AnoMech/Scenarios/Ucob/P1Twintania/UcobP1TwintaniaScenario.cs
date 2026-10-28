@@ -109,17 +109,18 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         // P1 timing reference: UCOB retail timeline (seconds from pull) published
         // on the Lodestone. HP-dependent section timing remains approximate.
         // The opener follows the documented retail order: Twister, Fireball, Death Sentence.
+        // Observed pull: FF Logs wFgvQzPqXfZLAapR, fight 11. Section drills
+        // are local times from first event in each recorded HP segment.
+        // This is one real kill, not a universal timeline for HP transitions.
         (float At, string Mechanic)[][] tracks =
         [
-            [(8f, "Plummet"), (11f, "Twister"), (16f, "Fireball"),
-             (19f, "Death Sentence"), (28f, "Plummet"), (30f, "Twister"),
-             (35f, "Fireball")],
-            [(8f, "Liquid Hell"), (13f, "Generate"), (20f, "Liquid Hell"),
-             (25f, "Death Sentence"), (33f, "Generate"), (37f, "Twister"),
-             (46f, "Plummet")],
-            [(8f, "Liquid Hell"), (13f, "Generate"), (20f, "Liquid Hell + Fireball"),
-             (26f, "Death Sentence"), (34f, "Plummet"), (37f, "Generate"),
-             (41f, "Twister"), (50f, "Plummet")]
+            [(6.894f, "Plummet"), (11.035f, "Twister"), (16.250f, "Fireball"),
+             (20.351f, "Death Sentence")],
+            [(0f, "Liquid Hell"), (5.824f, "Generate"), (12.186f, "Liquid Hell"),
+             (20.013f, "Death Sentence"), (28.114f, "Generate"),
+             (32.246f, "Twister")],
+            [(0f, "Liquid Hell"), (5.821f, "Generate"), (12.092f, "Liquid Hell"),
+             (19.066f, "Fireball"), (24.181f, "Death Sentence")]
         ];
         var section = Math.Clamp(settings.Section, 0, 2);
         foreach (var item in tracks[section])
@@ -218,7 +219,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
                 // Non-MT practice currently assumes scripted bot swap to the MT.
                 world.Events.Add(2.8f, () => { activeTank = PartyRole.MainTank; swapComplete = true; twin?.SetTarget(Get(activeTank)); });
             }
-            world.Events.Add(4.6f, () =>
+            world.Events.Add(4.45f, () =>
             {
                 if (!swapComplete || activeTank == exposedTank)
                 {
@@ -254,9 +255,9 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         }
         else
         {
-            twin?.NativeCast(actionId, FFXIVClientStructs.FFXIV.Client.Game.ActionType.Action, 0f, 4f,
+            twin?.NativeCast(actionId, FFXIVClientStructs.FFXIV.Client.Game.ActionType.Action, 0f, 3.7f,
                 false, targetId: tank.GameObjectId);
-            world.Events.Add(4.1f, () =>
+            world.Events.Add(3.96f, () =>
                 new DamageSolver(world.Party).ApplyDamage(tank, 0.95f, DeathSentence, "Death Sentence: tank swap", lethal: false));
         }
     }
@@ -266,18 +267,18 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         // The cast bar finishes at t+2.0. Snapshot bait locations shortly before the finish,
         // then materialize the ground hazard at the finish. Checking a position sampled
         // at the same timestamp as the hit falsely kills every targeted moving player.
-        twin?.NativeCast(Twister, ActionType.Action, 0f, 2.0f, false);
+        twin?.NativeCast(Twister, ActionType.Action, 0f, 1.7f, false);
         var targets = roster.OrderBy(_ => Guid.NewGuid()).Take(4).ToList();
         if (settings.TwisterAlwaysOnMe && !targets.Contains(settings.Role))
             targets[0] = settings.Role;
         var selected = targets.Select(Get).Where(p => p != null).ToList();
         var baitPositions = new List<Vector3>();
-        world.Events.Add(1.45f, () =>
+        world.Events.Add(1.40f, () =>
         {
             baitPositions.Clear();
             baitPositions.AddRange(selected.Select(p => p!.Position));
         });
-        world.Events.Add(2.0f, () =>
+        world.Events.Add(1.96f, () =>
         {
             twisterSpots.AddRange(baitPositions);
             foreach (var point in baitPositions)
@@ -360,7 +361,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
             if (character == null) continue;
             var link = i == 0 ? new Vector3(0f, 0f, -8f) : new Vector3(-8f, 0f, 5f);
             twin?.NativeCast(Generate, FFXIVClientStructs.FFXIV.Client.Game.ActionType.Action,
-                0f, 2f, false, targetId: character.GameObjectId);
+                0f, 2.7f, false, targetId: character.GameObjectId);
             world.Events.Add(6f, () =>
             {
                 if (Vector3.Distance(character.Position, link) > 2.5f)
