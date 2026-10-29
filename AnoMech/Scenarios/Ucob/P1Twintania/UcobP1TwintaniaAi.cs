@@ -53,21 +53,26 @@ public sealed class UcobP1TwintaniaAi : IScenarioAi<UcobP1TwintaniaScenario>
                 new Vector2(-4f, 0f), new Vector2(4f, 0f),
                 new Vector2(-13f, 11f), new Vector2(11f, 5f)
             ).NaturalOrder());
-            // Liquid Hell: ranged bait runs through successive positions rather than
-            // standing inside all five puddles. No teleport: MoveTo uses running speed.
-            // Each volley is reset before its first drop, then moves after each bait.
-            foreach (var start in new[] { 35.810f, 47.996f, 80.459f, 92.551f, 129.455f })
+            // Proximity Liquid Hell volleys: D3 follows the arena edge.
+            // Reverse the second volley to avoid crossing the preceding voidzones.
+            // The 92.551s volley is random and handled by the scenario.
+            foreach (var (start, reverse) in new (float Start, bool Reverse)[]
+            {
+                (35.810f, false), (47.996f, true),
+                (80.459f, false), (129.455f, false)
+            })
             {
                 for (var step = 0; step <= 5; step++)
                 {
-                    var baitStep = step;
                     var at = start + (step == 0 ? -0.5f : (step - 1) * 1.155f + 0.12f);
+                    var x = reverse
+                        ? (step == 5 ? -15.6f : 15.6f - step * 4.4f)
+                        : (step == 5 ? 15.6f : -13f + step * 4.4f);
                     world.Events.Add(at, () =>
                     {
                         var ranged = world.Party.Get(PartyRole.PhysRangedDps);
-                        if (ranged == null || !ranged.IsAlive()) return;
-                        var point = new Vector3(-13f + baitStep * 4.4f, 0f, 11f);
-                        ranged.MoveTo(point, speed: 6.5f);
+                        if (ranged != null && ranged.IsAlive())
+                            ranged.MoveTo(new Vector3(x, 0f, 11f), speed: 6.5f);
                     });
                 }
             }
@@ -89,9 +94,12 @@ public sealed class UcobP1TwintaniaAi : IScenarioAi<UcobP1TwintaniaScenario>
             // Second observed Fireball at t=99.525.
             ai.Move(96f, () => AiMove.Create(
                 new Vector2(-1.5f, -13f), new Vector2(-4f, -11f),
-                new Vector2(-0.8f, 1.8f), new Vector2(0f, 1f),
-                new Vector2(-1.2f, 1f), new Vector2(1.2f, 1f),
-                new Vector2(0f, 2f), new Vector2(0f, 0f)
+                scenario.IsLiquidHellBaiter(PartyRole.RegenHealer) ? (Vector2?)null : new Vector2(-0.8f, 1.8f),
+                scenario.IsLiquidHellBaiter(PartyRole.ShieldHealer) ? (Vector2?)null : new Vector2(0f, 1f),
+                scenario.IsLiquidHellBaiter(PartyRole.MeleeDpsA) ? (Vector2?)null : new Vector2(-1.2f, 1f),
+                scenario.IsLiquidHellBaiter(PartyRole.MeleeDpsB) ? (Vector2?)null : new Vector2(1.2f, 1f),
+                scenario.IsLiquidHellBaiter(PartyRole.PhysRangedDps) ? (Vector2?)null : new Vector2(0f, 2f),
+                scenario.IsLiquidHellBaiter(PartyRole.CasterDps) ? (Vector2?)null : new Vector2(0f, 0f)
             ).NaturalOrder());
             ai.Move(109f, () => AiMove.Create(
                 new Vector2(-1.5f, -13f), new Vector2(-4f, -11f),
