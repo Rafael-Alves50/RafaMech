@@ -44,6 +44,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
     private SimEnemy? twin;
     private PartyRole activeTank = PartyRole.MainTank;
     private readonly List<Vector3> twisterSpots = [];
+    private readonly List<(Vector3 Position, float Expires)> activeTwisters = [];
     private readonly List<Vector3> hellSpots = [];
     private readonly List<Vector3> neurolinkPositions = [];
     private readonly Dictionary<PartyRole, Vector3> pendingHatches = [];
@@ -78,7 +79,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
     private SimCharacter? fireballMarked;
     private const uint LiquidHell = 9901;
     private const uint Generate = 9902;
-    private const float TwisterRadius = 0.8f; // contact core; larger knockback occurs only on contact
+    private const float TwisterRadius = 1.25f; // retail proximity verified in bossmod
     private const float LiquidHellRadius = 3.0f;
 
     public void DrawSettings()
@@ -104,6 +105,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
     {
         world = simWorld;
         twisterSpots.Clear();
+        activeTwisters.Clear();
         hellSpots.Clear();
         neurolinkPositions.Clear();
         pendingHatches.Clear();
@@ -158,6 +160,8 @@ public sealed class UcobP1TwintaniaScenario : IScenario
             }, section, at));
         }
         var endAt = events.Max(x => x.Time) + 12f;
+        if (settings.Section == 0)
+            world.Events.Add(139.330f, () => twin?.Despawn());
         world.Events.Add(endAt, () =>
         {
             Natives.UserActions.Acted -= OnPlayerAction;
@@ -169,6 +173,11 @@ public sealed class UcobP1TwintaniaScenario : IScenario
     public void Tick(float delta, float elapsed)
     {
         currentElapsed = elapsed;
+        activeTwisters.RemoveAll(t => elapsed >= t.Expires);
+        foreach (var hazard in activeTwisters)
+            foreach (var victim in world.Party.Find.InsideCircle(hazard.Position, TwisterRadius).ToList())
+                new DamageSolver(world.Party).ApplyDamage(victim, 1f, TwisterAOE,
+                    "Twister: stepped into lingering tornado", lethal: true);
         foreach (var role in roster)
         {
             var character = Get(role);
@@ -321,6 +330,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         world.Events.Add(1.96f, () =>
         {
             twisterSpots.AddRange(baitPositions);
+            activeTwisters.AddRange(baitPositions.Select(p => (Position: p, Expires: currentElapsed + 4f)));
             foreach (var point in baitPositions)
             {
                 world.SpawnEventObject(new EventObjectSpawnConfig
