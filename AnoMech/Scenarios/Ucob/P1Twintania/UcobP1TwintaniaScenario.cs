@@ -156,7 +156,19 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         });
     }
 
-    public void Tick(float delta, float elapsed) => currentElapsed = elapsed;
+    // Retail Neurolink status (344) applies only while standing in a link.
+    public void Tick(float delta, float elapsed)
+    {
+        currentElapsed = elapsed;
+        foreach (var role in roster)
+        {
+            var character = Get(role);
+            if (character == null) continue;
+            var inside = neurolinkPositions.Any(link => Vector3.DistanceSquared(character.Position, link) <= 4f);
+            if (inside && !character.HasStatus(344)) character.AddStatus(344);
+            else if (!inside && character.HasStatus(344)) character.RemoveStatus(344);
+        }
+    }
 
     private void OnPlayerAction(PlayerAction action)
     {
@@ -450,9 +462,11 @@ public sealed class UcobP1TwintaniaScenario : IScenario
             world.Events.Add(hitDelay, () =>
             {
                 pendingHatches.Remove(assigned);
-                if (Vector3.Distance(character.Position, link) > 2.5f)
+                if (Vector3.Distance(character.Position, link) > 2.5f || character.HasStatus(1434))
                     new DamageSolver(world.Party).ApplyDamage(character, 1f, Generate,
-                        "Hatch: orb not intercepted in Neurolink", lethal: true);
+                        "Hatch: orb not intercepted in Neurolink or Mana Hypersensitivity active", lethal: true);
+                else
+                    character.AddStatus(1434, duration: 16f);
             });
         }
     }
