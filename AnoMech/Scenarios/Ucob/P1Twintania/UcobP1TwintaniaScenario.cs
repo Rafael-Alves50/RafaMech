@@ -50,7 +50,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
     private const uint NeurolinkEObj = 0x1E88FF;
     private const uint LiquidHellEObj = 0x1E88FE;
     public Vector2 DodgeForHatch(PartyRole role, Vector2 normal)
-        => pendingHatches.TryGetValue(role, out var link) ? new Vector2(link.X + 2.8f, link.Z) : normal;
+        => pendingHatches.TryGetValue(role, out var link) ? new Vector2(link.X + 3.6f, link.Z + 3f) : normal;
     private readonly PartyRole[] roster = [
         PartyRole.MainTank, PartyRole.OffTank, PartyRole.RegenHealer,
         PartyRole.ShieldHealer, PartyRole.MeleeDpsA, PartyRole.MeleeDpsB,
@@ -286,7 +286,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         // The cast bar finishes at t+2.0. Snapshot bait locations shortly before the finish,
         // then materialize the ground hazard at the finish. Checking a position sampled
         // at the same timestamp as the hit falsely kills every targeted moving player.
-        twin?.NativeCast(Twister, ActionType.Action, 0f, 1.7f, false);
+        twin?.NativeCast(Twister, ActionType.Action, 0f, 1.96f, false);
         var targets = roster.OrderBy(_ => Guid.NewGuid()).Take(4).ToList();
         if (settings.TwisterAlwaysOnMe && !targets.Contains(settings.Role))
             targets[0] = settings.Role;
@@ -394,12 +394,20 @@ public sealed class UcobP1TwintaniaScenario : IScenario
     private void ScheduleHatch(int section)
     {
         if (neurolinkPositions.Count == 0) return;
-        var targets = roster.Skip(4).OrderBy(_ => Guid.NewGuid())
+        var targets = roster.Skip(4).OrderBy(_ => world.Stream("ucob-hatch-targets").Next())
             .Take(Math.Min(neurolinkPositions.Count, 2)).ToArray();
+        var assignedRoles = new HashSet<PartyRole>();
+        var recordedAt = mechanicAt + (settings.Section switch { 2 => 35.810f, 3 => 80.459f, _ => 0f });
         // The NA caster intercepts the physical ranged player's orb while D3 baits.
         for (var i = 0; i < targets.Length; ++i)
         {
             var assigned = targets[i] == PartyRole.PhysRangedDps ? PartyRole.CasterDps : targets[i];
+            if (!assignedRoles.Add(assigned))
+            {
+                assigned = new[] { PartyRole.MeleeDpsA, PartyRole.MeleeDpsB, PartyRole.CasterDps }
+                    .First(role => !assignedRoles.Contains(role));
+                assignedRoles.Add(assigned);
+            }
             var character = Get(assigned);
             if (character == null) continue;
             var link = neurolinkPositions[i];
@@ -409,7 +417,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
                 character.MoveTo(link, speed: 6.5f);
             // Recorded hatch hits (from FF Logs): 47.684, 71.611,
             // 92.283/93.172, 122.999/123.445. Last cast precedes boss death.
-            float[] delays = mechanicAt switch
+            float[] delays = recordedAt switch
             {
                 > 130f => [],
                 > 110f => [7.070f, 7.516f],
@@ -419,12 +427,26 @@ public sealed class UcobP1TwintaniaScenario : IScenario
             };
             if (i >= delays.Length) continue;
             var hitDelay = delays[i];
-            if (mechanicAt is > 60f and < 70f or > 110f and < 120f)
-                world.Events.Add(6.2f, () =>
+            if (recordedAt is > 60f and < 70f or > 110f and < 120f)
+            {
+                // Leave the Neurolink BEFORE Twister snapshots at 1.4s into
+                // its cast, then dodge sideways and return via a safe waypoint.
+                world.Events.Add(4.8f, () =>
                 {
                     if (trainingBotsEnabled && assigned != settings.Role)
-                        character.MoveTo(link, speed: 6.5f);
+                        character.MoveTo(link + new Vector3(2.8f, 0, 0), speed: 6.5f);
                 });
+                world.Events.Add(6.15f, () =>
+                {
+                    if (trainingBotsEnabled && assigned != settings.Role)
+                        character.MoveTo(link + new Vector3(0, 0, 3f), speed: 8.3f);
+                });
+                world.Events.Add(6.66f, () =>
+                {
+                    if (trainingBotsEnabled && assigned != settings.Role)
+                        character.MoveTo(link, speed: 8.3f);
+                });
+            }
             world.Events.Add(hitDelay, () =>
             {
                 pendingHatches.Remove(assigned);
