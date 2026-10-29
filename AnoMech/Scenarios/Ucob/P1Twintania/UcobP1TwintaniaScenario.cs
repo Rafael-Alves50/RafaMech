@@ -419,6 +419,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
             .Take(Math.Min(neurolinkPositions.Count, 2)).ToArray();
         var assignedRoles = new HashSet<PartyRole>();
         var recordedAt = mechanicAt + (settings.Section switch { 2 => 35.810f, 3 => 80.459f, _ => 0f });
+        twin?.NativeCast(Generate, ActionType.Action, 0f, 2.98f, false);
         // The NA caster intercepts the physical ranged player's orb while D3 baits.
         for (var i = 0; i < targets.Length; ++i)
         {
@@ -433,7 +434,18 @@ public sealed class UcobP1TwintaniaScenario : IScenario
             if (character == null) continue;
             var link = neurolinkPositions[i];
             pendingHatches[assigned] = link;
-            twin?.NativeCast(Generate, ActionType.Action, 0f, 2.98f, false, targetId: character.GameObjectId);
+            character.AttachLockonVfx(118);
+            SimEnemy? oviform = null;
+            world.Events.Add(2.98f, () =>
+            {
+                oviform = world.SpawnEnemy(new EnemySpawnConfig(
+                    BNpcBaseId: 0x1FE0, // real UCOB Hatch orb (Oviform)
+                    NameId: 0, Level: UcobConstants.Level,
+                    Targetable: false, EnemyList: EnemyListMode.Never,
+                    Visibility: SpawnVisibility.Visible,
+                    Placement: new Placement(twin?.Position ?? Vector3.Zero, 0)));
+            });
+            world.Events.Add(3.15f, () => oviform?.Follow(character, speed: 5f));
             if (trainingBotsEnabled && assigned != settings.Role)
                 character.MoveTo(link, speed: 6.5f);
             // Recorded hatch hits (from FF Logs): 47.684, 71.611,
@@ -470,6 +482,9 @@ public sealed class UcobP1TwintaniaScenario : IScenario
             }
             world.Events.Add(hitDelay, () =>
             {
+                oviform?.NativeActionEffect(9903, 0.6f, 0, 0, ActionType.Action, 0,
+                    animationTargetId: character.GameObjectId, actionTargetId: character.GameObjectId);
+                oviform?.Despawn();
                 pendingHatches.Remove(assigned);
                 if (Vector3.Distance(character.Position, link) > 2.5f || character.HasStatus(1434))
                     new DamageSolver(world.Party).ApplyDamage(character, 1f, Generate,
