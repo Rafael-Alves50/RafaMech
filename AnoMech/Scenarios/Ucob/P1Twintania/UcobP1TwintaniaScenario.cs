@@ -39,6 +39,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
     private bool otHasTakenFirstSwap;
     private PartyRole exposedTank;
     private float currentElapsed;
+    private bool trainingBotsEnabled;
 
     private SimEnemy? twin;
     private PartyRole activeTank = PartyRole.MainTank;
@@ -102,6 +103,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         swapComplete = false;
         otHasTakenFirstSwap = false;
         currentElapsed = 0f;
+        trainingBotsEnabled = selectedAi == 0;
         AnoMech.Core.Native.Interfaces.Natives.UserActions.Acted -= OnPlayerAction;
         AnoMech.Core.Native.Interfaces.Natives.UserActions.Acted += OnPlayerAction;
         if (selectedAi is { } ai && ai == 0)
@@ -382,6 +384,11 @@ public sealed class UcobP1TwintaniaScenario : IScenario
             var link = i == 0 ? new Vector3(0f, 0f, -8f) : new Vector3(-8f, 0f, 5f);
             twin?.NativeCast(Generate, FFXIVClientStructs.FFXIV.Client.Game.ActionType.Action,
                 0f, 2.7f, false, targetId: character.GameObjectId);
+            // The selected Hatch target must intercept at the Neurolink. The
+            // original AI never moved for Generate, so every bot target died.
+            // Do not automatically move the human-controlled seat.
+            if (trainingBotsEnabled && role != settings.Role)
+                character.MoveTo(link, speed: 6.5f);
             world.Events.Add(6f, () =>
             {
                 if (Vector3.Distance(character.Position, link) > 2.5f)
