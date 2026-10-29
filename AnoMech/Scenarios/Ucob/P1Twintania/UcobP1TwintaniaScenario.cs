@@ -23,6 +23,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
     public IReadOnlyList<IScenarioAi> AiStrats => [new UcobP1TwintaniaAi()];
     public object SettingsOverrides => settings;
     private readonly Settings settings = new();
+    public bool FullPull => settings.Section == 0;
     private sealed class Settings
     {
         public PartyRole Role { get; set; } = PartyRole.RegenHealer;
