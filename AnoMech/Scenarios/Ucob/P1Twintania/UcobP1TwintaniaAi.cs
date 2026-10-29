@@ -1,5 +1,6 @@
 using System.Numerics;
 using AnoMech.Core.Game.Ai;
+using AnoMech.Core.Game.Party;
 using AnoMech.Core.SimObjects;
 
 namespace AnoMech.Scenarios.Ucob.P1Twintania;
@@ -51,6 +52,24 @@ public sealed class UcobP1TwintaniaAi : IScenarioAi<UcobP1TwintaniaScenario>
                 new Vector2(-4f, 0f), new Vector2(4f, 0f),
                 new Vector2(-13f, 11f), new Vector2(11f, 5f)
             ).NaturalOrder());
+            // Liquid Hell: ranged bait runs through successive positions rather than
+            // standing inside all five puddles. No teleport: MoveTo uses running speed.
+            // Each volley is reset before its first drop, then moves after each bait.
+            foreach (var start in new[] { 35.810f, 47.996f, 80.459f, 92.551f, 129.455f })
+            {
+                for (var step = 0; step <= 5; step++)
+                {
+                    var baitStep = step;
+                    var at = start + step * 1.15f + (step == 0 ? -0.5f : 0.12f);
+                    world.Events.Add(at, () =>
+                    {
+                        var ranged = world.Party.Get(PartyRole.PhysRangedDps);
+                        if (ranged == null || !ranged.IsAlive()) return;
+                        var point = new Vector3(-13f + baitStep * 4.4f, 0f, 11f);
+                        ranged.MoveTo(point, speed: 6.5f);
+                    });
+                }
+            }
             // Second Twister: leave the baited ground after snapshot.
             ai.Move(69.50f, () => AiMove.Create(
                 new Vector2(-3.5f, -13f), new Vector2(-6f, -11f),
