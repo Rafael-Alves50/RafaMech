@@ -30,8 +30,8 @@ public sealed class UcobP1TwintaniaAi : IScenarioAi<UcobP1TwintaniaScenario>
             new Vector2(-6f, 0f), new Vector2(6f, 0f),
             new Vector2(-15f, 11f), new Vector2(13f, 5f)
         ).NaturalOrder());
-        // Five-man Fireball after Twister, tanks + one healer out, ranged returns to bait.
-        ai.Move(16.0f, () => AiMove.Create(
+        // Begin gathering after the Twister resolves at ~13.0s; allow travel time before Fireball at ~16.75s.\n        // Five-man Fireball stack, tanks + one healer out.
+        ai.Move(13.25f, () => AiMove.Create(
             new Vector2(-1.5f, -13f),
             new Vector2(-4f, -11f),
             new Vector2(-7f, -2.5f),
