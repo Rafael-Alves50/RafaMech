@@ -115,7 +115,12 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         {
             var at = item.Time;
             var kind = item.Kind;
-            world.Events.Add(at, () => Execute(kind.ToString(), section, at));
+            world.Events.Add(at, () => Execute(kind switch
+            {
+                UcobP1Timeline.Mechanic.DeathSentence => "Death Sentence",
+                UcobP1Timeline.Mechanic.LiquidHell => "Liquid Hell",
+                _ => kind.ToString()
+            }, section, at));
         }
         var endAt = events.Max(x => x.Time) + 12f;
         world.Events.Add(endAt, () =>
