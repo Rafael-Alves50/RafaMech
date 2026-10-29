@@ -389,7 +389,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
             // Do not automatically move the human-controlled seat.
             if (trainingBotsEnabled && role != settings.Role)
                 character.MoveTo(link, speed: 6.5f);
-            world.Events.Add(6f, () =>
+            world.Events.Add(2.7f, () =>
             {
                 if (Vector3.Distance(character.Position, link) > 2.5f)
                     new DamageSolver(world.Party).ApplyDamage(character, 1f, Generate,
