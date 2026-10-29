@@ -51,7 +51,7 @@ public sealed class UcobP1TwintaniaAi : IScenarioAi<UcobP1TwintaniaScenario>
                 new Vector2(-1.5f, -13f), new Vector2(-4f, -11f),
                 new Vector2(-7f, -2.5f), new Vector2(7f, -2.5f),
                 new Vector2(-4f, 0f), new Vector2(4f, 0f),
-                new Vector2(-13f, 11f), new Vector2(11f, 5f)
+                new Vector2(-13f, 11f), new Vector2(11f, -5f)
             ).NaturalOrder());
             // Proximity Liquid Hell volleys: D3 follows the arena edge.
             // Reverse the second volley to avoid crossing the preceding voidzones.
@@ -89,7 +89,7 @@ public sealed class UcobP1TwintaniaAi : IScenarioAi<UcobP1TwintaniaScenario>
                 new Vector2(-1.5f, -13f), new Vector2(-4f, -11f),
                 new Vector2(-7f, -2.5f), new Vector2(7f, -2.5f),
                 new Vector2(-4f, 0f), new Vector2(4f, 0f),
-                new Vector2(-13f, 11f), new Vector2(11f, 5f)
+                new Vector2(-13f, 11f), new Vector2(11f, -5f)
             ).NaturalOrder());
             // Second observed Fireball at t=99.525.
             ai.Move(96f, () => AiMove.Create(
@@ -105,7 +105,7 @@ public sealed class UcobP1TwintaniaAi : IScenarioAi<UcobP1TwintaniaScenario>
                 new Vector2(-1.5f, -13f), new Vector2(-4f, -11f),
                 new Vector2(-7f, -2.5f), new Vector2(7f, -2.5f),
                 new Vector2(-4f, 0f), new Vector2(4f, 0f),
-                new Vector2(-13f, 11f), new Vector2(11f, 5f)
+                new Vector2(-13f, 11f), new Vector2(11f, -5f)
             ).NaturalOrder());
             // Third Twister t=120.067–122.023. Hatch baiters move
             // a short distance away from their Neurolink, then return.
