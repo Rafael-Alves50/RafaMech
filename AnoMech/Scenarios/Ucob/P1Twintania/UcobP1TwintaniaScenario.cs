@@ -75,6 +75,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
     private const uint TwisterAOE = 9899;
     private const uint TwisterVoidzoneEObj = 0x1E8910;
     private const uint Fireball = 9900;
+    private SimCharacter? fireballMarked;
     private const uint LiquidHell = 9901;
     private const uint Generate = 9902;
     private const float TwisterRadius = 0.8f; // contact core; larger knockback occurs only on contact
@@ -106,6 +107,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         hellSpots.Clear();
         neurolinkPositions.Clear();
         pendingHatches.Clear();
+        fireballMarked = null;
         activeTank = PartyRole.MainTank;
         awaitingPlayerProvoke = false;
         swapComplete = false;
@@ -135,6 +137,13 @@ public sealed class UcobP1TwintaniaScenario : IScenario
             world.Events.Add(0.3f, () => SpawnNeurolink(new Vector3(0, 0, -8)));
             world.Events.Add(0.4f, () => SpawnNeurolink(new Vector3(-8, 0, 5)));
         }
+        // Headmarker timestamps are independently recorded in FF Logs fight 11.
+        if (settings.Section is 0 or 1)
+            world.Events.Add(10.946f, () => MarkFireball(false));
+        if (settings.Section == 0)
+            world.Events.Add(92.373f, () => MarkFireball(true));
+        if (settings.Section == 3)
+            world.Events.Add(11.914f, () => MarkFireball(true));
         var section = Math.Clamp(settings.Section, 0, 3);
         var events = UcobP1Timeline.ForDrill(section);
         foreach (var item in events)
@@ -333,34 +342,34 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         world.Events.Add(6.5f, () => twisterSpots.Clear());
     }
 
+    private void MarkFireball(bool overlappingLiquidHells)
+    {
+        // Ranged baiter is left out of the later Fireball stack in this
+        // default NA training strategy while Liquid Hells are still dropping.
+        var possible = roster.Skip(2)
+            .Where(r => !overlappingLiquidHells || r != PartyRole.PhysRangedDps)
+            .Select(Get).Where(p => p != null).ToList();
+        if (possible.Count == 0) return;
+        fireballMarked = possible[world.Stream("ucob-fireball-marker").Next(possible.Count)];
+        fireballMarked.AttachLockonVfx(117);
+    }
+
     private void ScheduleFireball()
     {
-        // For a bot-practice run, pick a target already at the designated stack
-        // anchor rather than an uncontrolled player outside the bot stack.
-        // TODO: drive bot movement from a randomly chosen marked target for retail fidelity.
-        var stackAnchor = new Vector3(0f, 0f, 1f);
-        var candidates = roster.Skip(2).Select(Get)
-            .Where(p => p != null && Vector3.DistanceSquared(p.Position, stackAnchor) <= 9f)
-            .ToList();
-        var target = candidates.Count > 0
-            ? candidates[world.Stream("ucob-fireball").Next(candidates.Count)]
-            : Pick(roster.Skip(2).ToArray());
+        // FF Logs action timestamp is the hit, not the headmarker application.
+        var target = fireballMarked ?? Pick(roster.Skip(2).ToArray());
         if (target == null) return;
-        // Fireball is instant/no castbar in retail. Play its action effect on impact.
-        world.Events.Add(0.5f, () =>
-            twin?.NativeActionEffect(Fireball, 0.6f, 0, 0, ActionType.Action, 0,
-                animationTargetId: target.GameObjectId, actionTargetId: target.GameObjectId));
-        world.Events.Add(0.5f, () =>
-        {
-            var members = world.Party.Find.InsideCircle(target.Position, 5f).ToList();
-            if (members.Count == 0) return;
-            var sharedDamage = 0.9f / members.Count;
-            if (members.Count < 5)
-                world.Fail($"Fireball: only {members.Count} in stack (need five).");
-            foreach (var member in members)
-                new DamageSolver(world.Party).ApplyDamage(member,
-                    sharedDamage, Fireball, "Fireball: shared damage", lethal: false);
-        });
+        fireballMarked = null;
+        twin?.NativeActionEffect(Fireball, 0.6f, 0, 0, ActionType.Action, 0,
+            animationTargetId: target.GameObjectId, actionTargetId: target.GameObjectId);
+        var members = world.Party.Find.InsideCircle(target.Position, 4f).ToList();
+        if (members.Count == 0) return;
+        if (members.Count < 5)
+            world.Fail($"Fireball: only {members.Count} in stack (need five).");
+        var sharedDamage = 0.9f / members.Count;
+        foreach (var member in members)
+            new DamageSolver(world.Party).ApplyDamage(member,
+                sharedDamage, Fireball, "Fireball: shared damage", lethal: false);
     }
 
     private void ScheduleLiquidHells(bool randomTarget)
