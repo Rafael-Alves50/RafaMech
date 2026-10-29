@@ -425,7 +425,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
     private void ScheduleHatch(int section)
     {
         if (neurolinkPositions.Count == 0) return;
-        var targets = roster.Skip(4).OrderBy(_ => world.Stream("ucob-hatch-targets").Next())
+        var targets = world.Stream("ucob-hatch-targets").Shuffle(roster.Skip(4))
             .Take(Math.Min(neurolinkPositions.Count, 2)).ToArray();
         var assignedRoles = new HashSet<PartyRole>();
         var recordedAt = mechanicAt + (settings.Section switch { 2 => 35.810f, 3 => 80.459f, _ => 0f });
