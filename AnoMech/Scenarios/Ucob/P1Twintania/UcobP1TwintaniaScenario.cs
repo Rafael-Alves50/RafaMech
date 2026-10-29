@@ -45,6 +45,12 @@ public sealed class UcobP1TwintaniaScenario : IScenario
     private PartyRole activeTank = PartyRole.MainTank;
     private readonly List<Vector3> twisterSpots = [];
     private readonly List<Vector3> hellSpots = [];
+    private readonly List<Vector3> neurolinkPositions = [];
+    private readonly Dictionary<PartyRole, Vector3> pendingHatches = [];
+    private const uint NeurolinkEObj = 0x1E88FF;
+    private const uint LiquidHellEObj = 0x1E88FE;
+    public Vector2 DodgeForHatch(PartyRole role, Vector2 normal)
+        => pendingHatches.TryGetValue(role, out var link) ? new Vector2(link.X + 2.8f, link.Z) : normal;
     private readonly PartyRole[] roster = [
         PartyRole.MainTank, PartyRole.OffTank, PartyRole.RegenHealer,
         PartyRole.ShieldHealer, PartyRole.MeleeDpsA, PartyRole.MeleeDpsB,
@@ -98,6 +104,8 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         world = simWorld;
         twisterSpots.Clear();
         hellSpots.Clear();
+        neurolinkPositions.Clear();
+        pendingHatches.Clear();
         activeTank = PartyRole.MainTank;
         awaitingPlayerProvoke = false;
         swapComplete = false;
@@ -109,6 +117,24 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         if (selectedAi is { } ai && ai == 0)
             new UcobP1TwintaniaAi().Run(this, world);
         world.Events.Add(0.15f, SpawnTwintania);
+        // NA neurolink triangle; one link is left when Twintania crosses 75%,
+        // a second at 45%, and the third on death. The times in a recorded
+        // pull are proxies for those HP transitions, not live HP readings.
+        if (settings.Section == 0)
+        {
+            world.Events.Add(31.0f, () => SpawnNeurolink(new Vector3(0, 0, -8)));
+            world.Events.Add(32.0f, () => twin?.SetPosition(new Placement(new Vector3(-8, 0, 5), -MathF.PI / 2f)));
+            world.Events.Add(76.0f, () => SpawnNeurolink(new Vector3(-8, 0, 5)));
+            world.Events.Add(77.0f, () => twin?.SetPosition(new Placement(new Vector3(8, 0, 5), MathF.PI / 2f)));
+            world.Events.Add(139.0f, () => SpawnNeurolink(new Vector3(8, 0, 5)));
+        }
+        else if (settings.Section == 2)
+            world.Events.Add(0.3f, () => SpawnNeurolink(new Vector3(0, 0, -8)));
+        else if (settings.Section == 3)
+        {
+            world.Events.Add(0.3f, () => SpawnNeurolink(new Vector3(0, 0, -8)));
+            world.Events.Add(0.4f, () => SpawnNeurolink(new Vector3(-8, 0, 5)));
+        }
         var section = Math.Clamp(settings.Section, 0, 3);
         var events = UcobP1Timeline.ForDrill(section);
         foreach (var item in events)
@@ -352,29 +378,61 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         });
     }
 
+    private void SpawnNeurolink(Vector3 position)
+    {
+        neurolinkPositions.Add(position);
+        world.SpawnEventObject(new EventObjectSpawnConfig
+        {
+            EObjId = NeurolinkEObj,
+            Placement = new Placement(position, 0f),
+            Radius = 2f,
+            Lifetime = 300f,
+            TargetableStatus = 1,
+        });
+    }
+
     private void ScheduleHatch(int section)
     {
-        var targets = roster.Skip(4).OrderBy(_ => Guid.NewGuid()).Take(section == 2 ? 2 : 1).ToArray();
-        // NAUR customization: M1 always intercepts a Hatch assigned to the physical ranged baiter.
-        for (var i = 0; i < targets.Length; i++)
+        if (neurolinkPositions.Count == 0) return;
+        var targets = roster.Skip(4).OrderBy(_ => Guid.NewGuid())
+            .Take(Math.Min(neurolinkPositions.Count, 2)).ToArray();
+        // The NA caster intercepts the physical ranged player's orb while D3 baits.
+        for (var i = 0; i < targets.Length; ++i)
         {
-            var role = targets[i] == PartyRole.PhysRangedDps ? PartyRole.MeleeDpsA : targets[i];
-            var character = Get(role);
+            var assigned = targets[i] == PartyRole.PhysRangedDps ? PartyRole.CasterDps : targets[i];
+            var character = Get(assigned);
             if (character == null) continue;
-            var link = i == 0 ? new Vector3(0f, 0f, -8f) : new Vector3(-8f, 0f, 5f);
-            twin?.NativeCast(Generate, FFXIVClientStructs.FFXIV.Client.Game.ActionType.Action,
-                0f, 2.7f, false, targetId: character.GameObjectId);
-            // The selected Hatch target must intercept at the Neurolink. The
-            // original AI never moved for Generate, so every bot target died.
-            // Do not automatically move the human-controlled seat.
-            if (trainingBotsEnabled && role != settings.Role)
+            var link = neurolinkPositions[i];
+            pendingHatches[assigned] = link;
+            twin?.NativeCast(Generate, ActionType.Action, 0f, 2.98f, false, targetId: character.GameObjectId);
+            if (trainingBotsEnabled && assigned != settings.Role)
                 character.MoveTo(link, speed: 6.5f);
-            world.Events.Add(2.7f, () =>
+            // Recorded hatch hits (from FF Logs): 47.684, 71.611,
+            // 92.283/93.172, 122.999/123.445. Last cast precedes boss death.
+            float[] delays = mechanicAt switch
             {
+                > 130f => [],
+                > 110f => [7.070f, 7.516f],
+                > 80f => [6.003f, 6.892f],
+                > 60f => [7.687f],
+                _ => [6.050f]
+            };
+            if (i >= delays.Length) continue;
+            var hitDelay = delays[i];
+            if (mechanicAt is > 60f and < 70f or > 110f and < 120f)
+                world.Events.Add(6.2f, () =>
+                {
+                    if (trainingBotsEnabled && assigned != settings.Role)
+                        character.MoveTo(link, speed: 6.5f);
+                });
+            world.Events.Add(hitDelay, () =>
+            {
+                pendingHatches.Remove(assigned);
                 if (Vector3.Distance(character.Position, link) > 2.5f)
                     new DamageSolver(world.Party).ApplyDamage(character, 1f, Generate,
-                        "Hatch: intercept inside Neurolink", lethal: true);
+                        "Hatch: orb not intercepted in Neurolink", lethal: true);
             });
         }
     }
+
 }
