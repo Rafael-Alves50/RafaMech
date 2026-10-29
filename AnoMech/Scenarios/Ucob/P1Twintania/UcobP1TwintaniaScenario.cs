@@ -23,6 +23,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
     public IReadOnlyList<IScenarioAi> AiStrats => [new UcobP1TwintaniaAi()];
     public object SettingsOverrides => settings;
     private readonly Settings settings = new();
+    public bool FullPull => settings.Section == 0;
     private sealed class Settings
     {
         public PartyRole Role { get; set; } = PartyRole.RegenHealer;
@@ -38,6 +39,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
     private bool otHasTakenFirstSwap;
     private PartyRole exposedTank;
     private float currentElapsed;
+    private bool trainingBotsEnabled;
 
     private SimEnemy? twin;
     private PartyRole activeTank = PartyRole.MainTank;
@@ -85,10 +87,10 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         if (ImGui.Checkbox("Twister always on me", ref always))
             settings.TwisterAlwaysOnMe = always;
         var section = settings.Section;
-        var options = new[] { "100–75%: opener", "75–45%: one Neurolink", "45–0%: two Neurolinks" };
+        var options = new[] { "Complete P1: recorded pull (0–139s)", "100–75%: opener", "75–45%: one Neurolink", "45–0%: two Neurolinks" };
         if (ImGui.Combo("Practice section", ref section, options, options.Length))
             settings.Section = section;
-        ImGui.TextWrapped("Training build: cast timings, boss model and mechanic resolution are provisional.");
+        ImGui.TextWrapped("Recorded-pull practice: a full observed P1 timeline, not an HP-driven retail replay. Neurolink visuals and hatch orbs are still under development.");
     }
 
     public void Run(SimWorld simWorld, int? selectedAi)
@@ -101,19 +103,30 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         swapComplete = false;
         otHasTakenFirstSwap = false;
         currentElapsed = 0f;
+        trainingBotsEnabled = selectedAi == 0;
         AnoMech.Core.Native.Interfaces.Natives.UserActions.Acted -= OnPlayerAction;
         AnoMech.Core.Native.Interfaces.Natives.UserActions.Acted += OnPlayerAction;
         if (selectedAi is { } ai && ai == 0)
             new UcobP1TwintaniaAi().Run(this, world);
         world.Events.Add(0.15f, SpawnTwintania);
-        // P1 timing reference: UCOB retail timeline (seconds from pull) published
-        // on the Lodestone. HP-dependent section timing remains approximate.
-        // The opener follows the documented retail order: Twister, Fireball, Death Sentence.
         // Observed pull: FF Logs wFgvQzPqXfZLAapR, fight 11. Section drills
         // are local times from first event in each recorded HP segment.
         // This is one real kill, not a universal timeline for HP transitions.
+        // Source: FF Logs wFgvQzPqXfZLAapR fight 11, a single observed kill.
+        // Full mode follows all recorded Twintania abilities in order, including
+        // the two later Twisters and every five-hit Liquid Hell volley.
+        // HP thresholds vary between parties; this is time-based replay training.
         (float At, string Mechanic)[][] tracks =
         [
+            [
+                (6.894f, "Plummet"), (11.035f, "Twister"), (16.250f, "Fireball"),
+                (20.351f, "Death Sentence"), (35.810f, "Liquid Hell"), (41.634f, "Generate"),
+                (47.996f, "Liquid Hell"), (55.823f, "Death Sentence"), (63.924f, "Generate"),
+                (68.056f, "Twister"), (80.459f, "Liquid Hell"), (86.280f, "Generate"),
+                (92.551f, "Liquid Hell"), (99.525f, "Fireball"), (104.640f, "Death Sentence"),
+                (111.797f, "Plummet"), (115.929f, "Generate"), (120.067f, "Twister"),
+                (127.183f, "Plummet"), (129.455f, "Liquid Hell"), (135.277f, "Generate")
+            ],
             [(6.894f, "Plummet"), (11.035f, "Twister"), (16.250f, "Fireball"),
              (20.351f, "Death Sentence")],
             [(0f, "Liquid Hell"), (5.824f, "Generate"), (12.186f, "Liquid Hell"),
@@ -122,7 +135,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
             [(0f, "Liquid Hell"), (5.821f, "Generate"), (12.092f, "Liquid Hell"),
              (19.066f, "Fireball"), (24.181f, "Death Sentence")]
         ];
-        var section = Math.Clamp(settings.Section, 0, 2);
+        var section = Math.Clamp(settings.Section, 0, 3);
         foreach (var item in tracks[section])
         {
             var at = item.At;
@@ -175,23 +188,23 @@ public sealed class UcobP1TwintaniaScenario : IScenario
             Visibility: SpawnVisibility.Visible,
             Placement: new Placement(new Vector3(0f, 0f, -8f), MathF.PI)));
         twin?.SetTarget(Get(activeTank));
-        if (settings.Section == 1)
+        if (settings.Section == 2)
             twin?.SetPosition(new Placement(new Vector3(-12f, 0f, 5f), -MathF.PI / 2f));
-        else if (settings.Section == 2)
+        else if (settings.Section == 3)
             twin?.SetPosition(new Placement(new Vector3(0f, 0f, 0f), MathF.PI));
     }
 
     private void Execute(string mechanic, int section, float at)
     {
         mechanicAt = at;
-        if (section == 2 && mechanic == "Plummet" && activeTank == PartyRole.MainTank)
+        if (section == 3 && mechanic == "Plummet" && activeTank == PartyRole.MainTank)
             twin?.MoveTo(new Vector3(12f, 0f, 5f), 4f, MathF.PI / 2f);
         if (mechanic.Contains("Liquid Hell"))
-            ScheduleLiquidHells(section == 2 && mechanic.Contains("+"));
+            ScheduleLiquidHells(section == 3 && mechanic.Contains("+"));
         if (mechanic.Contains("Fireball"))
             ScheduleFireball();
         if (mechanic == "Generate")
-            ScheduleHatch(section);
+            ScheduleHatch(section == 0 ? (at < 80f ? 1 : 2) : section - 1);
         if (mechanic == "Twister")
             ScheduleTwisters();
         if (mechanic == "Plummet")
@@ -371,7 +384,12 @@ public sealed class UcobP1TwintaniaScenario : IScenario
             var link = i == 0 ? new Vector3(0f, 0f, -8f) : new Vector3(-8f, 0f, 5f);
             twin?.NativeCast(Generate, FFXIVClientStructs.FFXIV.Client.Game.ActionType.Action,
                 0f, 2.7f, false, targetId: character.GameObjectId);
-            world.Events.Add(6f, () =>
+            // The selected Hatch target must intercept at the Neurolink. The
+            // original AI never moved for Generate, so every bot target died.
+            // Do not automatically move the human-controlled seat.
+            if (trainingBotsEnabled && role != settings.Role)
+                character.MoveTo(link, speed: 6.5f);
+            world.Events.Add(2.7f, () =>
             {
                 if (Vector3.Distance(character.Position, link) > 2.5f)
                     new DamageSolver(world.Party).ApplyDamage(character, 1f, Generate,
