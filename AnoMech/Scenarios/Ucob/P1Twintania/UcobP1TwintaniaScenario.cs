@@ -211,7 +211,10 @@ public sealed class UcobP1TwintaniaScenario : IScenario
 
     private SimCharacter? Get(PartyRole role) => world.Party.Get(role);
     private SimCharacter? Pick(IReadOnlyList<PartyRole> options)
-        => options.Select(Get).Where(p => p != null).OrderBy(_ => Guid.NewGuid()).FirstOrDefault();
+    {
+        var candidates = options.Select(Get).Where(p => p != null).ToArray();
+        return candidates.Length == 0 ? null : candidates[world.Stream("ucob-pick").Next(candidates.Length)];
+    }
 
     private void SpawnTwintania()
     {
@@ -317,7 +320,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         // then materialize the ground hazard at the finish. Checking a position sampled
         // at the same timestamp as the hit falsely kills every targeted moving player.
         twin?.NativeCast(Twister, ActionType.Action, 0f, 1.96f, false);
-        var targets = roster.OrderBy(_ => Guid.NewGuid()).Take(4).ToList();
+        var targets = world.Stream("ucob-twister-targets").Shuffle(roster).Take(4).ToList();
         if (settings.TwisterAlwaysOnMe && !targets.Contains(settings.Role))
             targets[0] = settings.Role;
         var selected = targets.Select(Get).Where(p => p != null).ToList();
@@ -361,7 +364,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
             .Select(Get).Where(p => p != null).ToList();
         if (possible.Count == 0) return;
         fireballMarked = possible[world.Stream("ucob-fireball-marker").Next(possible.Count)];
-        fireballMarked.AttachLockonVfx(117);
+        fireballMarked?.AttachLockonVfx(117);
     }
 
     private void ScheduleFireball()
