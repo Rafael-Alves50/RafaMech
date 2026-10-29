@@ -132,9 +132,9 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         if (settings.Section == 0)
         {
             world.Events.Add(31.0f, () => SpawnNeurolink(new Vector3(0, 0, -8)));
-            world.Events.Add(32.0f, () => twin?.SetPosition(new Placement(new Vector3(-8, 0, 5), -MathF.PI / 2f)));
+            world.Events.Add(32.0f, () => twin?.MoveTo(new Vector3(-8, 0, 5), 4f, -MathF.PI / 2f));
             world.Events.Add(76.0f, () => SpawnNeurolink(new Vector3(-8, 0, 5)));
-            world.Events.Add(77.0f, () => twin?.SetPosition(new Placement(new Vector3(8, 0, 5), MathF.PI / 2f)));
+            world.Events.Add(76.2f, () => twin?.MoveTo(new Vector3(8, 0, 5), 4f, MathF.PI / 2f));
             world.Events.Add(139.0f, () => SpawnNeurolink(new Vector3(8, 0, 5)));
         }
         else if (settings.Section == 2)
@@ -208,7 +208,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         activeTank = PartyRole.MainTank;
         swapComplete = true;
         awaitingPlayerProvoke = false;
-        twin.SetTarget(Get(activeTank));
+        twin.SetTarget(Get(activeTank), follow: false);
     }
 
     private void BotSwapToOffTank()
@@ -217,7 +217,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         otHasTakenFirstSwap = true;
         swapComplete = true;
         awaitingPlayerProvoke = false;
-        twin?.SetTarget(Get(activeTank));
+        twin?.SetTarget(Get(activeTank), follow: false);
     }
 
     private SimCharacter? Get(PartyRole role) => world.Party.Get(role);
@@ -237,7 +237,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
             EnemyList: EnemyListMode.Always,
             Visibility: SpawnVisibility.Visible,
             Placement: new Placement(new Vector3(0f, 0f, -8f), MathF.PI)));
-        twin?.SetTarget(Get(activeTank));
+        twin?.SetTarget(Get(activeTank), follow: false);
         if (settings.Section == 2)
             twin?.SetPosition(new Placement(new Vector3(-12f, 0f, 5f), -MathF.PI / 2f));
         else if (settings.Section == 3)
@@ -250,7 +250,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         if (section == 3 && mechanic == "Plummet" && activeTank == PartyRole.MainTank)
             twin?.MoveTo(new Vector3(12f, 0f, 5f), 4f, MathF.PI / 2f);
         if (mechanic.Contains("Liquid Hell"))
-            ScheduleLiquidHells(section == 0 ? at > 90f && at < 100f : section == 3 && mechanic.Contains("+"));
+            ScheduleLiquidHells(section == 0 ? at > 90f && at < 100f : section == 3 && at > 10f && at < 15f);
         if (mechanic.Contains("Fireball"))
             ScheduleFireball();
         if (mechanic == "Generate")
@@ -280,7 +280,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
             else
             {
                 // Non-MT practice currently assumes scripted bot swap to the MT.
-                world.Events.Add(2.8f, () => { activeTank = PartyRole.MainTank; swapComplete = true; twin?.SetTarget(Get(activeTank)); });
+                world.Events.Add(2.8f, () => { activeTank = PartyRole.MainTank; swapComplete = true; twin?.SetTarget(Get(activeTank), follow: false); });
             }
             world.Events.Add(4.45f, () =>
             {
