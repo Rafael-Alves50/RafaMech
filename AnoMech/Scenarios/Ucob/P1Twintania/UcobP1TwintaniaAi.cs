@@ -99,12 +99,15 @@ public sealed class UcobP1TwintaniaAi : IScenarioAi<UcobP1TwintaniaScenario>
                 new Vector2(-4f, 0f), new Vector2(4f, 0f),
                 new Vector2(-13f, 11f), new Vector2(11f, 5f)
             ).NaturalOrder());
-            // Third Twister t=120.067–122.023.
+            // Third Twister t=120.067–122.023. Hatch baiters move
+            // a short distance away from their Neurolink, then return.
             ai.Move(121.55f, () => AiMove.Create(
                 new Vector2(-3.5f, -13f), new Vector2(-6f, -11f),
                 new Vector2(-9f, -2.5f), new Vector2(9f, -2.5f),
-                new Vector2(-6f, 0f), new Vector2(6f, 0f),
-                new Vector2(-15f, 11f), new Vector2(13f, 5f)
+                scenario.DodgeForHatch(PartyRole.MeleeDpsA, new Vector2(-6f, 0f)),
+                scenario.DodgeForHatch(PartyRole.MeleeDpsB, new Vector2(6f, 0f)),
+                scenario.DodgeForHatch(PartyRole.PhysRangedDps, new Vector2(-15f, 11f)),
+                scenario.DodgeForHatch(PartyRole.CasterDps, new Vector2(13f, 5f))
             ).NaturalOrder());
         }
     }
