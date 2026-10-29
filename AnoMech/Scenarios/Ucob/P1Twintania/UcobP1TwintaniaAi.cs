@@ -60,7 +60,7 @@ public sealed class UcobP1TwintaniaAi : IScenarioAi<UcobP1TwintaniaScenario>
                 for (var step = 0; step <= 5; step++)
                 {
                     var baitStep = step;
-                    var at = start + step * 1.15f + (step == 0 ? -0.5f : 0.12f);
+                    var at = start + (step == 0 ? -0.5f : (step - 1) * 1.15f + 0.12f);
                     world.Events.Add(at, () =>
                     {
                         var ranged = world.Party.Get(PartyRole.PhysRangedDps);
