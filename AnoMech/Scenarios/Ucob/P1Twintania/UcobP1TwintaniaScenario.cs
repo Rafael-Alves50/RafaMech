@@ -304,7 +304,16 @@ public sealed class UcobP1TwintaniaScenario : IScenario
 
     private void ScheduleFireball()
     {
-        var target = Pick(roster.Skip(2).ToArray());
+        // For a bot-practice run, pick a target already at the designated stack
+        // anchor rather than an uncontrolled player outside the bot stack.
+        // TODO: drive bot movement from a randomly chosen marked target for retail fidelity.
+        var stackAnchor = new Vector3(0f, 0f, 1f);
+        var candidates = roster.Skip(2).Select(Get)
+            .Where(p => p != null && Vector3.DistanceSquared(p.Position, stackAnchor) <= 9f)
+            .ToList();
+        var target = candidates.Count > 0
+            ? candidates[world.Stream("ucob-fireball").Next(candidates.Count)]
+            : Pick(roster.Skip(2).ToArray());
         if (target == null) return;
         // Fireball is instant/no castbar in retail. Play its action effect on impact.
         world.Events.Add(0.5f, () =>
