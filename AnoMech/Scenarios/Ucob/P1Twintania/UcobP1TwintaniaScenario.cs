@@ -46,6 +46,9 @@ public sealed class UcobP1TwintaniaScenario : IScenario
     private readonly List<Vector3> twisterSpots = [];
     private readonly List<(Vector3 Position, float Expires)> activeTwisters = [];
     private readonly List<Vector3> hellSpots = [];
+    private readonly List<(Vector3 Position, float Expires)> activeLiquidHells = [];
+    private PartyRole? liquidHellBaiter;
+    public bool IsLiquidHellBaiter(PartyRole role) => liquidHellBaiter == role;
     private readonly List<Vector3> neurolinkPositions = [];
     private readonly Dictionary<PartyRole, Vector3> pendingHatches = [];
     private const uint NeurolinkEObj = 0x1E88FF;
@@ -80,7 +83,7 @@ public sealed class UcobP1TwintaniaScenario : IScenario
     private const uint LiquidHell = 9901;
     private const uint Generate = 9902;
     private const float TwisterRadius = 1.25f; // retail proximity verified in bossmod
-    private const float LiquidHellRadius = 3.0f;
+    private const float LiquidHellRadius = 6.0f;
 
     public void DrawSettings()
     {
@@ -107,6 +110,8 @@ public sealed class UcobP1TwintaniaScenario : IScenario
         twisterSpots.Clear();
         activeTwisters.Clear();
         hellSpots.Clear();
+        activeLiquidHells.Clear();
+        liquidHellBaiter = null;
         neurolinkPositions.Clear();
         pendingHatches.Clear();
         fireballMarked = null;
@@ -174,6 +179,12 @@ public sealed class UcobP1TwintaniaScenario : IScenario
     {
         currentElapsed = elapsed;
         activeTwisters.RemoveAll(t => elapsed >= t.Expires);
+        activeLiquidHells.RemoveAll(h => elapsed >= h.Expires);
+        foreach (var puddle in activeLiquidHells)
+            foreach (var victim in world.Party.Find.InsideCircle(puddle.Position, LiquidHellRadius).ToList())
+                if (victim.IsAlive())
+                    new DamageSolver(world.Party).ApplyDamage(victim, 1f, LiquidHell,
+                        "Liquid Hell: stood in active flame", lethal: true);
         foreach (var hazard in activeTwisters)
             foreach (var victim in world.Party.Find.InsideCircle(hazard.Position, TwisterRadius).ToList())
                 new DamageSolver(world.Party).ApplyDamage(victim, 1f, TwisterAOE,
@@ -387,28 +398,50 @@ public sealed class UcobP1TwintaniaScenario : IScenario
 
     private void ScheduleLiquidHells(bool randomTarget)
     {
-        var candidates = randomTarget ? roster.Where(r => r != activeTank).ToArray()
-            : new[] { PartyRole.PhysRangedDps };
-        var target = Pick(candidates);
+        // Retail: one target is chosen for all five puddles. The initial sets
+        // use the farthest player (NA: physical ranged); the 45%-HP set randomizes.
+        var options = randomTarget
+            ? roster.Where(r => r != activeTank && r != settings.Role && Get(r) != fireballMarked).ToArray()
+            : [PartyRole.PhysRangedDps];
+        var target = Pick(options);
         if (target == null) return;
-        var localPuddles = new List<Vector3>();
+        var baitRole = roster.First(r => ReferenceEquals(Get(r), target));
+        liquidHellBaiter = baitRole;
+        var start = target.Position;
+        var angle = MathF.Atan2(start.Z, start.X);
+
         for (var n = 0; n < 5; n++)
         {
-            world.Events.Add(n * 1.15f, () =>
+            var index = n;
+            world.Events.Add(index * 1.155f, () =>
             {
                 var point = target.Position;
-                localPuddles.Add(point);
-                twin?.NativeCast(LiquidHell, FFXIVClientStructs.FFXIV.Client.Game.ActionType.Action,
-                    0f, 1f, false, position: point);
+                twin?.NativeCast(LiquidHell, ActionType.Action, 0f, 0.1f, false, position: point);
+                // The damaging persistent voidzone appears after the impact,
+                // not at the time the target position is sampled.
+                world.Events.Add(1.8f, () =>
+                {
+                    world.SpawnEventObject(new EventObjectSpawnConfig
+                    {
+                        EObjId = LiquidHellEObj,
+                        Placement = new Placement(point, 0f),
+                        Radius = LiquidHellRadius,
+                        Lifetime = 6f,
+                        TargetableStatus = 1,
+                    });
+                    activeLiquidHells.Add((point, currentElapsed + 6f));
+                });
+                if (randomTarget && trainingBotsEnabled && baitRole != settings.Role)
+                {
+                    var nextAngle = angle + (index + 1) * 0.5f;
+                    var destination = new Vector3(16f * MathF.Cos(nextAngle), 0f, 16f * MathF.Sin(nextAngle));
+                    world.Events.Add(0.12f, () => target.MoveTo(destination, speed: 8.3f));
+                }
             });
         }
-        world.Events.Add(5.8f, () =>
+        world.Events.Add(7.6f, () =>
         {
-            foreach (var point in localPuddles)
-                foreach (var victim in world.Party.Find.InsideCircle(point, LiquidHellRadius).ToList())
-                    new DamageSolver(world.Party).ApplyDamage(victim, 1f, LiquidHell,
-                        "Liquid Hell puddle", lethal: true);
-            localPuddles.Clear();
+            if (liquidHellBaiter == baitRole) liquidHellBaiter = null;
         });
     }
 
