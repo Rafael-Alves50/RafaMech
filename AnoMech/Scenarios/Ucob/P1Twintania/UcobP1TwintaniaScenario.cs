@@ -341,6 +341,26 @@ public sealed class UcobP1TwintaniaScenario : IScenario
             baitPositions.Clear();
             baitPositions.AddRange(selected.Select(p => p!.Position));
         });
+        // Training bots must dodge AFTER bait snapshot, irrespective of competing
+        // AI/Hatch commands. Move away from the actual sampled position, not
+        // from a pre-scripted waypoint that may already be occupied.
+        if (trainingBotsEnabled)
+            world.Events.Add(1.43f, () =>
+            {
+                foreach (var role in roster)
+                {
+                    if (role == settings.Role) continue;
+                    var bot = Get(role);
+                    if (bot == null || !bot.IsAlive()) continue;
+                    var current = bot.Position;
+                    var direction = new Vector2(current.X, current.Z);
+                    if (direction.LengthSquared() < 0.01f)
+                        direction = new Vector2(1f, 0f);
+                    direction = Vector2.Normalize(direction);
+                    var destination = current + new Vector3(direction.X * 3.3f, 0f, direction.Y * 3.3f);
+                    bot.MoveTo(destination, speed: 8.3f);
+                }
+            });
         world.Events.Add(1.96f, () =>
         {
             twisterSpots.AddRange(baitPositions);
