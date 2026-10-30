@@ -31,18 +31,26 @@ public sealed class UcobP1TwintaniaAi : IScenarioAi<UcobP1TwintaniaScenario>
             new Vector2(-6f, 0f), new Vector2(6f, 0f),
             new Vector2(-15f, 11f), new Vector2(13f, 5f)
         ).NaturalOrder());
-        // Wait until the Twister has resolved and bots have cleared their bait positions before converging.
-        // Six non-tank stack seats allow five bots to stack even when a player-controlled seat stays out.
-        ai.Move(13.75f, () => AiMove.Create(
-            new Vector2(-1.5f, -13f),
-            new Vector2(-4f, -11f),
+        // Never run straight through the Twister bait points when joining Fireball.
+        // First move around the outside of the bait lane, then converge from the north.
+        // AiManager's Move() is a direct line, not obstacle-aware pathfinding.
+        ai.Move(13.05f, () => AiMove.Create(
+            new Vector2(-3.5f, -13f), new Vector2(-6f, -11f),
+            new Vector2(-9f, 4.5f), new Vector2(9f, 4.5f),
+            new Vector2(-6f, 4.5f), new Vector2(6f, 4.5f),
+            new Vector2(-15f, 5f), new Vector2(13f, 9f)
+        ).NaturalOrder(), jitter: 0f, sprint: true);
+        // Finish the stack before Fireball (t=16.25), leaving MT and OT out.
+        ai.Move(14.30f, () => AiMove.Create(
+            new Vector2(-3.5f, -13f),
+            new Vector2(-6f, -11f),
             new Vector2(-0.8f, 1.8f),
             new Vector2(0f, 1.0f),
             new Vector2(-1.2f, 1.0f),
             new Vector2(1.2f, 1.0f),
             new Vector2(0f, 2.0f),
             new Vector2(0f, 0.0f)
-        ).NaturalOrder());
+        ).NaturalOrder(), jitter: 0f, sprint: true);
         // Complete-pull mode: reset after the first stack and handle both later Twisters.
         if (scenario.FullPull)
         {
