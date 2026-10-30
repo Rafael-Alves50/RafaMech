@@ -1,7 +1,6 @@
 using System.Numerics;
 using AnoMech.Core.Game.Ai;
 using AnoMech.Core.Game.Party;
-using AnoMech.Core.Game.Party;
 using AnoMech.Core.SimObjects;
 
 namespace AnoMech.Scenarios.Ucob.P1Twintania;
@@ -26,14 +25,15 @@ public sealed class UcobP1TwintaniaAi : IScenarioAi<UcobP1TwintaniaScenario>
             new Vector2(11f, 5f)
         ).NaturalOrder());
         // Move at ~75% of cast (11s–13s); movement must start BEFORE the ground Twisters spawn.
-        ai.Move(12.50f, () => AiMove.Create(
+        ai.Move(12.10f, () => AiMove.Create(
             new Vector2(-3.5f, -13f), new Vector2(-6f, -11f),
             new Vector2(-9f, -2.5f), new Vector2(9f, -2.5f),
             new Vector2(-6f, 0f), new Vector2(6f, 0f),
             new Vector2(-15f, 11f), new Vector2(13f, 5f)
         ).NaturalOrder());
-        // Begin gathering after the Twister resolves at ~13.0s; allow travel time before Fireball at ~16.75s.\n        // Six non-tank stack seats allow five bots to stack even when a player-controlled seat stays out.
-        ai.Move(13.05f, () => AiMove.Create(
+        // Wait until the Twister has resolved and bots have cleared their bait positions before converging.
+        // Six non-tank stack seats allow five bots to stack even when a player-controlled seat stays out.
+        ai.Move(14.25f, () => AiMove.Create(
             new Vector2(-1.5f, -13f),
             new Vector2(-4f, -11f),
             new Vector2(-0.8f, 1.8f),
